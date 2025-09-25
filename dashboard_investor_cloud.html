@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investor Tracking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-white">Investor Tracking</h1>
+            <div class="flex space-x-4">
+                <button id="connectButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                    <span>Connect Wallet</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingPanel" class="hidden bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-400"></div>
+                <span id="loadingText">Loading blockchain data...</span>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="hidden bg-green-600/20 border border-green-500/30 rounded-xl p-4 mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>Connected:</span>
+                    <span id="walletAddress" class="font-mono text-sm"></span>
+                    <span class="ml-4">Network:</span>
+                    <span id="networkName" class="font-semibold">BSC</span>
+                </div>
+                <div class="flex space-x-2">
+                    <div id="cloudStatus" class="text-xs text-gray-400 mr-4">
+                        <span id="cloudIndicator">☁️ Cloud DB</span>
+                    </div>
+                    <button id="editUserInfo" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm">
+                        ✏️ Edit Info
+                    </button>
+                    <button onclick="loadAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">
+                        🔄 Refresh All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investor Info Panel -->
+        <div id="investorInfoPanel" class="hidden bg-gradient-to-r from-purple-600/20 to-purple-800/20 rounded-2xl p-6 backdrop-blur-sm border border-purple-500/30 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4">👤 Investor</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Name</p>
+                    <p id="investorName" class="text-white font-semibold">-</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Initial Investment</p>
+                    <p id="initialInvestment" class="text-white font-semibold">$0</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Initial Date</p>
+                    <p id="initialDate" class="text-white font-semibold">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROI and APY Cards -->
+        <div id="roiApyCards" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- ROI Card -->
+            <div class="bg-gradient-to-r from-emerald-600/20 to-emerald-800/20 rounded-2xl p-8 backdrop-blur-sm border border-emerald-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">📈 ROI (Return on Investment)</h3>
+                    <div id="roiTrend" class="text-2xl">📊</div>
+                </div>
+                <div id="roiValue" class="text-4xl font-bold text-emerald-400 mb-2">0.00%</div>
+                <div class="text-sm text-gray-400">
+                    <span>Profit/Loss: </span>
+                    <span id="roiDifference" class="font-semibold">$0</span>
+                </div>
+            </div>
+
+            <!-- APY Card -->
+            <div class="bg-gradient-to-r from-amber-600/20 to-amber-800/20 rounded-2xl p-8 backdrop-blur-sm border border-amber-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">📅 APY (Annual Percentage Yield)</h3>
+                    <div id="apyTrend" class="text-2xl">⏱️</div>
+                </div>
+                <div id="apyValue" class="text-4xl font-bold text-amber-400 mb-2">0.00%</div>
+                <div class="text-sm text-gray-400">
+                    <div class="mb-1">
+                        <span>Days elapsed: </span>
+                        <span id="daysPassed" class="font-semibold">0</span>
+                    </div>
+                    <div class="text-xs opacity-75">
+                        <span id="apyMethod">Calculation: Annual compounding</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bars Grid -->
+        <div id="progressBarsGrid" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            
+            <!-- Investor Level Progress Bar -->
+            <div id="investorLevelPanel" class="bg-gradient-to-r from-amber-600/20 to-amber-800/20 rounded-2xl p-6 backdrop-blur-sm border border-amber-500/30">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-white">🏆 Investor Level</h3>
+                        <p id="currentLevel" class="text-amber-400 font-semibold">Fan Investor</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-white" id="xtoomBalance">0 XTOO</p>
+                        <p class="text-gray-400 text-sm" id="nextLevelInfo">Next: Pro Investor</p>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar Container -->
+                <div class="relative">
+                    <div class="w-full bg-gray-700 rounded h-8 mb-4">
+                        <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-purple-600 h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden">
+                            <!-- Animated shine effect -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Level Markers -->
+                    <div class="flex justify-between text-xs text-gray-400 relative">
+                        <div class="text-center">
+                            <div class="w-2 h-2 bg-blue-400 rounded-full mx-auto mb-1"></div>
+                            <span>0</span>
+                            <br>
+                            <span class="text-blue-400">Fan</span>
+                        </div>
+                        <div class="text-center absolute left-1/2 transform -translate-x-1/2">
+                            <div class="w-2 h-2 bg-yellow-400 rounded-full mx-auto mb-1"></div>
+                            <span>2,500</span>
+                            <br>
+                            <span class="text-yellow-400">Pro</span>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-2 h-2 bg-purple-400 rounded-full mx-auto mb-1"></div>
+                            <span>5,000</span>
+                            <br>
+                            <span class="text-purple-400">VIP</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Investor Level Status -->
+                <div id="investorLevelStatus" class="mt-4 p-3 rounded-lg bg-white/5 text-center">
+                    <p class="text-sm text-gray-400">Checking investor status...</p>
+                </div>
+            </div>
+
+            <!-- Dividend Tracker Progress Bar -->
+            <div id="dividendTrackerPanel" class="bg-gradient-to-r from-emerald-600/20 to-emerald-800/20 rounded-2xl p-6 backdrop-blur-sm border border-emerald-500/30">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-white">💰 ADA Dividend Tracker</h3>
+                        <p id="dividendStatus" class="text-emerald-400 font-semibold">Loading...</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-white" id="contractBalance">0 XTOO</p>
+                        <p class="text-gray-400 text-sm" id="dividendInfo">Target: 1,000 XTOO</p>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar Container -->
+                <div class="relative">
+                    <div class="w-full bg-gray-700 rounded h-8 mb-4">
+                        <div id="dividendProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-600 h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden">
+                            <!-- Animated shine effect -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Target Markers -->
+                    <div class="flex justify-between text-xs text-gray-400 relative">
+                        <div class="text-center">
+                            <div class="w-2 h-2 bg-emerald-400 rounded-full mx-auto mb-1"></div>
+                            <span>0</span>
+                            <br>
+                            <span class="text-emerald-400">Start</span>
+                        </div>
+                        <div class="text-center absolute left-1/2 transform -translate-x-1/2">
+                            <div class="w-2 h-2 bg-yellow-400 rounded-full mx-auto mb-1"></div>
+                            <span>500</span>
+                            <br>
+                            <span class="text-yellow-400">Half</span>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-2 h-2 bg-green-400 rounded-full mx-auto mb-1"></div>
+                            <span>1,000</span>
+                            <br>
+                            <span class="text-green-400">🎯 Pay</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Eligibility Status -->
+                <div id="eligibilityStatus" class="mt-4 p-3 rounded-lg bg-white/5 text-center">
+                    <p class="text-sm text-gray-400">Checking dividend eligibility...</p>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Action Buttons -->
+        <div id="actionButtons" class="hidden flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <button id="buySellBtn" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <span>💰 Buy / Sell XTOO</span>
+            </button>
+            
+            <button id="chartBtn" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L3.5 15.9l0 2.59z"/>
+                </svg>
+                <span>View XTOO Chart</span>
+            </button>
+        </div>
+
+        <!-- Chart Modal -->
+        <div id="chartModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] border border-slate-600 overflow-hidden">
+                <div class="flex items-center justify-between p-3 sm:p-4 border-b border-slate-600">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">📈 XTOO Price Chart</h2>
+                    <button id="closeChartModal" class="text-gray-400 hover:text-white text-2xl">×</button>
+                </div>
+                <div class="relative w-full h-[75vh] sm:h-[70vh]">
+                    <iframe id="chartIframe" src="" class="w-full h-full border-0" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Balance Card -->
+        <div id="balanceCard" class="hidden bg-gradient-to-r from-blue-600/20 to-blue-800/20 rounded-2xl p-8 backdrop-blur-sm border border-blue-500/30 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4">Total Portfolio Balance</h2>
+            <div class="text-5xl font-bold text-blue-400" id="totalBalance">$0.00</div>
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Network</p>
+                    <p class="text-white font-semibold">Binance Smart Chain</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Tokens Found</p>
+                    <p class="text-white font-semibold" id="tokenCount">0</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Last Update</p>
+                    <p class="text-white font-semibold" id="lastUpdate">--:--:--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tokens Grid - 4 columns for main tokens -->
+        <div id="tokensGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- Token cards will be inserted here -->
+        </div>
+
+        <!-- Instructions -->
+        <div id="instructions" class="text-center py-20">
+            <div class="bg-slate-800/50 rounded-2xl p-12 backdrop-blur-sm border border-white/10">
+                <h2 class="text-3xl font-semibold text-white mb-4">Connect Your Wallet for ROI/APY Tracking</h2>
+                <p class="text-gray-300 text-lg mb-8">Connect your MetaMask wallet to track your Xtoom investment with ROI and APY metrics</p>
+                <div class="w-32 h-32 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <svg class="w-16 h-16 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <p class="mb-2">📊 Investor Dashboard Features:</p>
+                    <p class="mb-2">• ROI tracking based on your initial Xtoom investment</p>
+                    <p class="mb-2">• Annualized APY calculation based on elapsed days</p>
+                    <p class="mb-2">• Complete view: BNB, Xtoom, Cardano, WLF and other tokens</p>
+                    <p class="mb-2">• Specific tokens with distinctive badges and real prices</p>
+                    <p class="mb-2">• ☁️ Cloud database - access from any device</p>
+                    <p>🌐 Network: Binance Smart Chain (BSC)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- First Time User Modal -->
+    <div id="firstTimeModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-slate-600">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">🎉 Welcome New Investor!</h2>
+            <p class="text-gray-300 mb-6 text-center">To track your ROI/APY we need some initial information:</p>
+            
+            <form id="firstTimeForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Investor Name</label>
+                    <input type="text" id="userNameInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" placeholder="Ex: John Smith" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment (USD)</label>
+                    <input type="number" id="initialInvestmentInput" step="0.01" min="0" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" placeholder="Ex: 1000" required>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment Date</label>
+                    <input type="date" id="initialDateInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        💾 Save and Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Info Modal -->
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-slate-600">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">✏️ Edit Information</h2>
+            
+            <form id="editUserForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Investor Name</label>
+                    <input type="text" id="editUserNameInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment (USD)</label>
+                    <input type="number" id="editInitialInvestmentInput" step="0.01" min="0" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment Date</label>
+                    <input type="date" id="editInitialDateInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <button type="button" id="cancelEditBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        ❌ Cancel
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        💾 Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ================================
+        // SUPABASE CONFIGURATION
+        // ================================
+        // ✅ CONFIGURADO: Credenciales reales de Supabase
+        const SUPABASE_URL = 'https://slowkvbzjopnsgiwfdvs.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsb3drdmJ6am9wbnNnaXdmZHZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MTk5ODQsImV4cCI6MjA3NDM5NTk4NH0.phvZ282_EGIbrAv54bigNPH9eIw4qZmC1Fa0y9Q-_d4';
+        
+        let supabase = null;
+        let isCloudConnected = false;
+        
+        // Initialize Supabase
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            isCloudConnected = true;
+            console.log('✅ Supabase connected');
+        } catch (error) {
+            console.warn('⚠️ Supabase not configured, using localStorage fallback');
+            isCloudConnected = false;
+        }
+
+        // ================================
+        // TOKEN CONFIGURATION
+        // ================================
+        const SPECIFIC_TOKENS = [
+            {
+                address: '0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a',
+                name: 'Xtoom',
+                symbol: 'XTOO',
+                isTarget: true,
+                geckoApi: 'https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x934a02c24699598daef464cd0fbc81c57f262fa0'
+            },
+            {
+                address: '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47',
+                name: 'Cardano',
+                symbol: 'ADA',
+                isKnown: true
+            },
+            {
+                address: '0x47474747477b199288bF72a1D702f7Fe0Fb1DEeA',
+                name: 'World Liberty Financial',
+                symbol: 'WLF',
+                isKnown: true
+            },
+            {
+                address: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE',
+                name: 'XRP',
+                symbol: 'XRP',
+                isKnown: true
+            }
+        ];
+
+        const TOKEN_NAME_OVERRIDES = {
+            'Unknown Token': { name: 'World Liberty Financial', symbol: 'WLF' },
+            'Unknown': { name: 'World Liberty Financial', symbol: 'WLF' }
+        };
+
+        const BSC_CHAIN_ID = '0x38';
+        const BSC_RPC = 'https://bsc-dataseed.binance.org/';
+        const BSCSCAN_API = 'https://api.bscscan.com/api';
+        const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+
+        let userAddress = null;
+        let isConnected = false;
+        let currentUserData = null;
+        let xtoomCurrentValue = 0;
+        let xtoomBalance = 0;
+        let contractXtoomBalance = 0; // Balance del contrato para dividendos
+
+        // ================================
+        // INVESTOR LEVEL SYSTEM
+        // ================================
+        const INVESTOR_LEVELS = {
+            FAN: { min: 0, max: 2499, name: 'Fan Investor', color: 'blue', emoji: '🌟' },
+            PRO: { min: 2500, max: 4999, name: 'Pro Investor', color: 'yellow', emoji: '⚡' },
+            VIP: { min: 5000, max: Infinity, name: 'VIP Investor', color: 'purple', emoji: '👑' }
+        };
+
+        function getInvestorLevel(xtoomAmount) {
+            if (xtoomAmount >= INVESTOR_LEVELS.VIP.min) return INVESTOR_LEVELS.VIP;
+            if (xtoomAmount >= INVESTOR_LEVELS.PRO.min) return INVESTOR_LEVELS.PRO;
+            return INVESTOR_LEVELS.FAN;
+        }
+
+        function calculateProgress(xtoomAmount) {
+            if (xtoomAmount >= 5000) {
+                return 100;
+            } else if (xtoomAmount >= 2500) {
+                return 50 + ((xtoomAmount - 2500) / 2500) * 50;
+            } else {
+                return (xtoomAmount / 2500) * 50;
+            }
+        }
+
+        function updateInvestorLevelDisplay(xtoomTokens) {
+            const level = getInvestorLevel(xtoomTokens);
+            const progress = calculateProgress(xtoomTokens);
+            
+            document.getElementById('currentLevel').textContent = `${level.emoji} ${level.name}`;
+            document.getElementById('xtoomBalance').textContent = `${xtoomTokens.toLocaleString()} XTOO`;
+            
+            let nextLevelInfo = '';
+            if (level === INVESTOR_LEVELS.FAN) {
+                const needed = 2500 - xtoomTokens;
+                nextLevelInfo = `Next: ${INVESTOR_LEVELS.PRO.emoji} ${INVESTOR_LEVELS.PRO.name} (${needed.toLocaleString()} XTOO more)`;
+            } else if (level === INVESTOR_LEVELS.PRO) {
+                const needed = 5000 - xtoomTokens;
+                nextLevelInfo = `Next: ${INVESTOR_LEVELS.VIP.emoji} ${INVESTOR_LEVELS.VIP.name} (${needed.toLocaleString()} XTOO more)`;
+            } else {
+                nextLevelInfo = `🎉 Maximum level achieved!`;
+            }
+            document.getElementById('nextLevelInfo').textContent = nextLevelInfo;
+            
+            const progressBar = document.getElementById('progressBar');
+            
+            // Si no tiene Xtoom (balance = 0), dejar barra oscura
+            if (xtoomTokens <= 0) {
+                progressBar.className = `bg-gray-700 h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden`;
+                setTimeout(() => {
+                    progressBar.style.width = '0%';
+                }, 100);
+                return;
+            }
+            
+            // Si tiene Xtoom, aplicar colores según nivel
+            let gradient = 'from-blue-500 to-blue-600';
+            if (level === INVESTOR_LEVELS.PRO) {
+                gradient = 'from-yellow-500 to-orange-600';
+            } else if (level === INVESTOR_LEVELS.VIP) {
+                gradient = 'from-purple-500 to-pink-600';
+            }
+            
+            progressBar.className = `bg-gradient-to-r ${gradient} h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden`;
+            
+            setTimeout(() => {
+                progressBar.style.width = `${progress}%`;
+            }, 100);
+            
+            // Update investor level status annotation
+            const investorLevelStatus = document.getElementById('investorLevelStatus');
+            
+            if (xtoomTokens >= INVESTOR_LEVELS.VIP.min) {
+                // VIP Level - Maximum achieved
+                investorLevelStatus.innerHTML = `
+                    <p class="text-sm text-purple-400">👑 VIP Status Achieved!</p>
+                    <p class="text-xs text-gray-400">You have unlocked maximum potential crypto rewards</p>
+                `;
+                investorLevelStatus.className = 'mt-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 text-center';
+            } else if (xtoomTokens >= INVESTOR_LEVELS.PRO.min) {
+                // Pro Level - Achieved Pro status
+                investorLevelStatus.innerHTML = `
+                    <p class="text-sm text-yellow-400">⚡ Pro Investor Status!</p>
+                    <p class="text-xs text-gray-400">You have unlocked enhanced crypto opportunities for your portfolio</p>
+                `;
+                investorLevelStatus.className = 'mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center';
+            } else {
+                // Fan Level - Need to reach Pro (same format as dividend tracker)
+                const needed = INVESTOR_LEVELS.PRO.min - xtoomTokens;
+                investorLevelStatus.innerHTML = `
+                    <p class="text-sm text-amber-400">⚠️ Need ${needed.toLocaleString()} XTOO to get Potential Crypto for your Investor Portfolio</p>
+                    <p class="text-xs text-gray-400">You have ${xtoomTokens.toLocaleString()} XTOO (need ${needed.toLocaleString()} more for Pro level)</p>
+                `;
+                investorLevelStatus.className = 'mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center';
+            }
+        }
+
+        // ================================
+        // DIVIDEND TRACKER FUNCTIONS
+        // ================================
+        const XTOO_CONTRACT_ADDRESS = '0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a';
+        const DIVIDEND_TARGET = 1000; // 1000 XTOO para pagar dividendos
+        const MIN_XTOO_FOR_DIVIDENDS = 5000; // Mínimo para recibir dividendos
+
+        async function getContractXtoomBalance() {
+            try {
+                const balanceSignature = '0x70a08231'; // balanceOf(address)
+                const paddedAddress = XTOO_CONTRACT_ADDRESS.slice(2).padStart(64, '0');
+                const balanceData = balanceSignature + paddedAddress;
+                
+                const result = await callContract(XTOO_CONTRACT_ADDRESS, balanceData);
+                
+                if (result && result !== '0x') {
+                    const balance = formatUnits(result, 18); // Asumiendo 18 decimals
+                    return parseFloat(balance);
+                }
+                return 0;
+            } catch (error) {
+                console.error('Error getting contract XTOO balance:', error);
+                return 0;
+            }
+        }
+
+        function calculateDividendProgress(contractBalance) {
+            if (contractBalance >= DIVIDEND_TARGET) {
+                return 100;
+            }
+            return (contractBalance / DIVIDEND_TARGET) * 100;
+        }
+
+        function updateDividendTrackerDisplay(contractBalance, userXtoomBalance) {
+            const progress = calculateDividendProgress(contractBalance);
+            const remaining = Math.max(0, DIVIDEND_TARGET - contractBalance);
+            const isEligible = userXtoomBalance >= MIN_XTOO_FOR_DIVIDENDS;
+            
+            // Update contract balance display
+            document.getElementById('contractBalance').textContent = `${contractBalance.toLocaleString()} XTOO`;
+            
+            // Update status
+            let status = '';
+            if (contractBalance >= DIVIDEND_TARGET) {
+                status = '🎉 Ready to Pay Dividends!';
+            } else {
+                status = `📊 ${remaining.toLocaleString()} XTOO remaining`;
+            }
+            document.getElementById('dividendStatus').textContent = status;
+            
+            // Update info
+            const dividendInfo = document.getElementById('dividendInfo');
+            if (contractBalance >= DIVIDEND_TARGET) {
+                dividendInfo.textContent = '✅ Target Reached!';
+                dividendInfo.className = 'text-green-400 text-sm';
+            } else {
+                dividendInfo.textContent = `Target: 1,000 XTOO`;
+                dividendInfo.className = 'text-gray-400 text-sm';
+            }
+            
+            // Update progress bar
+            const dividendProgressBar = document.getElementById('dividendProgressBar');
+            
+            if (contractBalance <= 0) {
+                // Sin balance, barra oscura
+                dividendProgressBar.className = 'bg-gray-700 h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden';
+                setTimeout(() => {
+                    dividendProgressBar.style.width = '0%';
+                }, 100);
+            } else {
+                // Con balance, aplicar gradiente
+                let gradient = 'from-emerald-500 to-teal-600';
+                if (contractBalance >= DIVIDEND_TARGET) {
+                    gradient = 'from-green-500 to-emerald-600'; // Verde brillante cuando está listo
+                } else if (progress >= 50) {
+                    gradient = 'from-yellow-500 to-emerald-600'; // Amarillo-verde a medida que se acerca
+                }
+                
+                dividendProgressBar.className = `bg-gradient-to-r ${gradient} h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden`;
+                
+                setTimeout(() => {
+                    dividendProgressBar.style.width = `${progress}%`;
+                }, 100);
+            }
+            
+            // Update eligibility status
+            const eligibilityStatus = document.getElementById('eligibilityStatus');
+            if (isEligible) {
+                if (contractBalance >= DIVIDEND_TARGET) {
+                    eligibilityStatus.innerHTML = `
+                        <p class="text-sm text-green-400">✅ You are eligible for ADA dividends!</p>
+                        <p class="text-xs text-gray-400">Your ${userXtoomBalance.toLocaleString()} XTOO qualifies for rewards</p>
+                    `;
+                    eligibilityStatus.className = 'mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-center';
+                } else {
+                    eligibilityStatus.innerHTML = `
+                        <p class="text-sm text-blue-400">🎯 You qualify for dividends when target is reached</p>
+                        <p class="text-xs text-gray-400">Your ${userXtoomBalance.toLocaleString()} XTOO is above the 5,000 minimum</p>
+                    `;
+                    eligibilityStatus.className = 'mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center';
+                }
+            } else {
+                eligibilityStatus.innerHTML = `
+                    <p class="text-sm text-yellow-400">⚠️ Need ${MIN_XTOO_FOR_DIVIDENDS.toLocaleString()} XTOO minimum for dividends</p>
+                    <p class="text-xs text-gray-400">You have ${userXtoomBalance.toLocaleString()} XTOO (need ${(MIN_XTOO_FOR_DIVIDENDS - userXtoomBalance).toLocaleString()} more)</p>
+                `;
+                eligibilityStatus.className = 'mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center';
+            }
+        }
+
+        // ================================
+        // DATABASE FUNCTIONS (CLOUD + LOCAL FALLBACK)
+        // ================================
+        async function saveInvestorData(walletAddress, userData) {
+            try {
+                if (isCloudConnected && supabase) {
+                    // Save to Supabase
+                    const { data, error } = await supabase
+                        .from('investors')
+                        .upsert({
+                            wallet_address: walletAddress.toLowerCase(),
+                            name: userData.name,
+                            initial_investment: userData.initialInvestment,
+                            initial_date: userData.initialDate,
+                            updated_at: new Date().toISOString()
+                        });
+                    
+                    if (error) {
+                        console.error('Supabase save error:', error);
+                        throw error;
+                    }
+                    
+                    console.log('✅ Data saved to cloud database');
+                    updateCloudStatus('✅ Synced');
+                } else {
+                    throw new Error('Cloud not available');
+                }
+            } catch (error) {
+                console.warn('Cloud save failed, using localStorage:', error);
+                // Fallback to localStorage
+                const db = getLocalInvestorsDatabase();
+                db[walletAddress.toLowerCase()] = {
+                    ...userData,
+                    lastUpdated: new Date().toISOString()
+                };
+                localStorage.setItem('web3_wallet_investors', JSON.stringify(db));
+                updateCloudStatus('💾 Local');
+            }
+        }
+
+        async function getInvestorData(walletAddress) {
+            try {
+                if (isCloudConnected && supabase) {
+                    // Get from Supabase
+                    const { data, error } = await supabase
+                        .from('investors')
+                        .select('*')
+                        .eq('wallet_address', walletAddress.toLowerCase())
+                        .single();
+                    
+                    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+                        console.error('Supabase get error:', error);
+                        throw error;
+                    }
+                    
+                    if (data) {
+                        console.log('✅ Data loaded from cloud database');
+                        updateCloudStatus('✅ Synced');
+                        return {
+                            name: data.name,
+                            initialInvestment: data.initial_investment,
+                            initialDate: data.initial_date,
+                            lastUpdated: data.updated_at
+                        };
+                    }
+                    
+                    return null; // No data found
+                } else {
+                    throw new Error('Cloud not available');
+                }
+            } catch (error) {
+                console.warn('Cloud get failed, using localStorage:', error);
+                // Fallback to localStorage
+                const db = getLocalInvestorsDatabase();
+                const localData = db[walletAddress.toLowerCase()];
+                updateCloudStatus('💾 Local');
+                return localData || null;
+            }
+        }
+
+        function getLocalInvestorsDatabase() {
+            try {
+                return JSON.parse(localStorage.getItem('web3_wallet_investors')) || {};
+            } catch {
+                return {};
+            }
+        }
+
+        function isFirstTimeUser(walletAddress) {
+            // Check if we have user data (either from cloud or local)
+            return currentUserData === null || currentUserData === undefined;
+        }
+
+        function updateCloudStatus(status) {
+            const cloudIndicator = document.getElementById('cloudIndicator');
+            if (cloudIndicator) {
+                cloudIndicator.textContent = status;
+            }
+        }
+
+        // ================================
+        // ROI AND APY CALCULATIONS
+        // ================================
+        function calculateROI(currentValue, initialInvestment) {
+            if (initialInvestment <= 0) return 0;
+            return ((currentValue - initialInvestment) / initialInvestment) * 100;
+        }
+
+        function calculateAPY(roi, daysPassed) {
+            if (daysPassed <= 0) return 0;
+            
+            const apySimple = (roi / daysPassed) * 365;
+            const roiDecimal = roi / 100;
+            const apyCompound = (Math.pow(1 + roiDecimal, 365 / daysPassed) - 1) * 100;
+            
+            if (daysPassed < 30) {
+                return (apySimple + apyCompound) / 2;
+            } else {
+                return apyCompound;
+            }
+        }
+
+        function getDaysPassed(initialDate) {
+            const start = new Date(initialDate);
+            const now = new Date();
+            const diffTime = Math.abs(now - start);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function updateROIAPYDisplay(currentXtoomValue, userData) {
+            const { initialInvestment, initialDate } = userData;
+            
+            const roi = calculateROI(currentXtoomValue, initialInvestment);
+            const daysPassed = getDaysPassed(initialDate);
+            const apy = calculateAPY(roi, daysPassed);
+            const difference = currentXtoomValue - initialInvestment;
+
+            // Update ROI card
+            const roiValue = document.getElementById('roiValue');
+            const roiDifference = document.getElementById('roiDifference');
+            const roiTrend = document.getElementById('roiTrend');
+            
+            roiValue.textContent = roi.toFixed(2) + '%';
+            roiDifference.textContent = (difference >= 0 ? '+$' : '-$') + Math.abs(difference).toFixed(2);
+            
+            if (roi > 0) {
+                roiValue.className = 'text-4xl font-bold text-emerald-400 mb-2';
+                roiDifference.className = 'font-semibold text-emerald-400';
+                roiTrend.textContent = '📈';
+            } else {
+                roiValue.className = 'text-4xl font-bold text-red-400 mb-2';
+                roiDifference.className = 'font-semibold text-red-400';
+                roiTrend.textContent = '📉';
+            }
+
+            // Update APY card
+            const apyValue = document.getElementById('apyValue');
+            const daysPassedEl = document.getElementById('daysPassed');
+            const apyTrend = document.getElementById('apyTrend');
+            const apyMethod = document.getElementById('apyMethod');
+            
+            apyValue.textContent = apy.toFixed(2) + '%';
+            daysPassedEl.textContent = daysPassed;
+            
+            if (daysPassed < 30) {
+                apyMethod.textContent = 'Calculation: Average (short period)';
+            } else {
+                apyMethod.textContent = 'Calculation: Annual compounding';
+            }
+            
+            if (apy > 0) {
+                apyValue.className = 'text-4xl font-bold text-amber-400 mb-2';
+                apyTrend.textContent = '🚀';
+            } else {
+                apyValue.className = 'text-4xl font-bold text-orange-400 mb-2';
+                apyTrend.textContent = '⏳';
+            }
+        }
+
+        function updateInvestorInfoDisplay(userData) {
+            document.getElementById('investorName').textContent = userData.name;
+            document.getElementById('initialInvestment').textContent = '$' + userData.initialInvestment.toLocaleString();
+            document.getElementById('initialDate').textContent = new Date(userData.initialDate).toLocaleDateString('en-US');
+        }
+
+        // ================================
+        // MODAL FUNCTIONS
+        // ================================
+        function showFirstTimeModal() {
+            document.getElementById('firstTimeModal').classList.remove('hidden');
+            document.getElementById('initialDateInput').valueAsDate = new Date();
+        }
+
+        function hideFirstTimeModal() {
+            document.getElementById('firstTimeModal').classList.add('hidden');
+        }
+
+        function showEditModal(userData) {
+            document.getElementById('editUserNameInput').value = userData.name;
+            document.getElementById('editInitialInvestmentInput').value = userData.initialInvestment;
+            document.getElementById('editInitialDateInput').valueAsDate = new Date(userData.initialDate);
+            document.getElementById('editUserModal').classList.remove('hidden');
+        }
+
+        function hideEditModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+        }
+
+        // ================================
+        // BLOCKCHAIN UTILITIES
+        // ================================
+        function hexToDecimal(hex) {
+            return parseInt(hex, 16);
+        }
+
+        function formatUnits(value, decimals) {
+            const divisor = Math.pow(10, decimals);
+            const num = parseInt(value, 16);
+            return (num / divisor).toString();
+        }
+
+        function formatEther(weiValue) {
+            return formatUnits(weiValue, 18);
+        }
+
+        function showLoading(text = 'Loading data...') {
+            document.getElementById('loadingPanel').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = text;
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingPanel').classList.add('hidden');
+        }
+
+        function updateConnectionStatus(connected) {
+            const connectButton = document.getElementById('connectButton');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const instructions = document.getElementById('instructions');
+            const balanceCard = document.getElementById('balanceCard');
+            const tokensGrid = document.getElementById('tokensGrid');
+            const walletAddress = document.getElementById('walletAddress');
+            const investorInfoPanel = document.getElementById('investorInfoPanel');
+            const roiApyCards = document.getElementById('roiApyCards');
+            const progressBarsGrid = document.getElementById('progressBarsGrid');
+            const actionButtons = document.getElementById('actionButtons');
+            
+            if (connected) {
+                connectButton.innerHTML = `
+                    <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <span>Connected</span>
+                `;
+                connectButton.className = connectButton.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-green-600 hover:bg-green-700');
+                
+                connectionStatus.classList.remove('hidden');
+                instructions.classList.add('hidden');
+                balanceCard.classList.remove('hidden');
+                tokensGrid.classList.remove('hidden');
+                investorInfoPanel.classList.remove('hidden');
+                roiApyCards.classList.remove('hidden');
+                progressBarsGrid.classList.remove('hidden');
+                actionButtons.classList.remove('hidden');
+                
+                walletAddress.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+            } else {
+                connectButton.innerHTML = `
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                    <span>Connect Wallet</span>
+                `;
+                connectButton.className = connectButton.className.replace('bg-green-600 hover:bg-green-700', 'bg-blue-600 hover:bg-blue-700');
+                
+                connectionStatus.classList.add('hidden');
+                instructions.classList.remove('hidden');
+                balanceCard.classList.add('hidden');
+                tokensGrid.classList.add('hidden');
+                investorInfoPanel.classList.add('hidden');
+                roiApyCards.classList.add('hidden');
+                progressBarsGrid.classList.add('hidden');
+                actionButtons.classList.add('hidden');
+            }
+        }
+
+        // ================================
+        // BLOCKCHAIN INTERACTION FUNCTIONS
+        // ================================
+        async function callContract(contractAddress, data) {
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{ to: contractAddress, data: data }, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const result = await response.json();
+                return result.result;
+            } catch (error) {
+                console.error('Contract call error:', error);
+                return null;
+            }
+        }
+
+        function applyNameOverrides(tokenInfo) {
+            const { name, symbol } = tokenInfo;
+            
+            if (name === 'Unknown Token' || name === 'Unknown' || symbol === 'UNK') {
+                return { ...tokenInfo, name: 'World Liberty Financial', symbol: 'WLF' };
+            }
+            
+            return tokenInfo;
+        }
+
+        async function getBasicTokenInfo(tokenAddress) {
+            try {
+                const nameSignature = '0x06fdde03';
+                const symbolSignature = '0x95d89b41';
+                const decimalsSignature = '0x313ce567';
+                
+                const [nameResult, symbolResult, decimalsResult] = await Promise.all([
+                    callContract(tokenAddress, nameSignature),
+                    callContract(tokenAddress, symbolSignature),
+                    callContract(tokenAddress, decimalsSignature)
+                ]);
+                
+                let name = 'Unknown Token';
+                let symbol = 'UNK';
+                let decimals = 18;
+                
+                if (decimalsResult) {
+                    decimals = hexToDecimal(decimalsResult);
+                }
+                
+                let tokenInfo = { name, symbol, decimals, address: tokenAddress };
+                return applyNameOverrides(tokenInfo);
+                
+            } catch (error) {
+                console.error('Error getting token info:', error);
+                let tokenInfo = { name: 'Unknown Token', symbol: 'UNK', decimals: 18, address: tokenAddress };
+                return applyNameOverrides(tokenInfo);
+            }
+        }
+
+        async function getTokenBalance(tokenAddress, decimals) {
+            try {
+                const balanceSignature = '0x70a08231';
+                const paddedAddress = userAddress.slice(2).padStart(64, '0');
+                const balanceData = balanceSignature + paddedAddress;
+                
+                const result = await callContract(tokenAddress, balanceData);
+                
+                if (result && result !== '0x') {
+                    return formatUnits(result, decimals);
+                }
+                return '0';
+            } catch (error) {
+                console.error(`Error getting token balance ${tokenAddress}:`, error);
+                return '0';
+            }
+        }
+
+        // ================================
+        // PRICE FUNCTIONS
+        // ================================
+        async function getBNBPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=binancecoin&vs_currencies=usd`);
+                const data = await response.json();
+                return data.binancecoin?.usd || 600;
+            } catch (error) {
+                console.error('Error getting BNB price:', error);
+                return 600;
+            }
+        }
+
+        async function getXtoomPrice() {
+            try {
+                const response = await fetch(SPECIFIC_TOKENS[0].geckoApi);
+                const data = await response.json();
+                if (data && data.data && data.data.attributes) {
+                    return parseFloat(data.data.attributes.base_token_price_usd) || 0.001;
+                }
+            } catch (error) {
+                console.error('Error getting Xtoom price:', error);
+            }
+            return 0.001;
+        }
+
+        async function getTokenPriceBySymbol(symbol, tokenAddress) {
+            switch (symbol?.toUpperCase()) {
+                case 'WLF':
+                    return await getWLFPrice();
+                case 'ADA':
+                    return await getADAPrice();
+                case 'XRP':
+                    return await getXRPPrice();
+                case 'XTOO':
+                case 'XTOOM':
+                    return await getXtoomPrice();
+                default:
+                    if (tokenAddress?.toLowerCase() === SPECIFIC_TOKENS[0].address.toLowerCase()) {
+                        return await getXtoomPrice();
+                    }
+                    return 0.001;
+            }
+        }
+
+        async function getWLFPrice() {
+            try {
+                const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=WLFIUSDT');
+                const data = await response.json();
+                if (data.price) {
+                    return parseFloat(data.price);
+                }
+            } catch (error) {
+                console.log('WLF not available on Binance, trying CoinGecko...');
+            }
+            
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=world-liberty-financial-wlfi&vs_currencies=usd`);
+                const data = await response.json();
+                return data['world-liberty-financial-wlfi']?.usd || 0.02;
+            } catch (error) {
+                return 0.02;
+            }
+        }
+
+        async function getADAPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=cardano&vs_currencies=usd`);
+                const data = await response.json();
+                return data.cardano?.usd || 0.5;
+            } catch (error) {
+                return 0.5;
+            }
+        }
+
+        async function getXRPPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=ripple&vs_currencies=usd`);
+                const data = await response.json();
+                return data.ripple?.usd || 0.6;
+            } catch (error) {
+                console.error('Error getting XRP price:', error);
+                return 0.6; // Fallback price
+            }
+        }
+
+        async function getBNBBalance() {
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_getBalance',
+                        params: [userAddress, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const result = await response.json();
+                return formatEther(result.result);
+            } catch (error) {
+                console.error('Error getting BNB balance:', error);
+                return '0';
+            }
+        }
+
+        // ================================
+        // TOKEN CARD CREATION
+        // ================================
+        function createTokenCard(token) {
+            const balanceNum = parseFloat(token.balance);
+            const priceNum = parseFloat(token.price);
+            const valueUSD = balanceNum * priceNum;
+            
+            let cardStyle = 'bg-gradient-to-r from-blue-600/20 to-blue-800/20 border-blue-500/30';
+            let badge = '';
+            
+            if (token.symbol === 'BNB') {
+                cardStyle = 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-yellow-500/30';
+                badge = '🟨 Native Coin';
+            } else if (token.symbol === 'XTOO' || token.isTarget) {
+                cardStyle = 'bg-gradient-to-r from-green-600/20 to-green-800/20 border-green-500/30';
+                badge = '⭐ Principal Token (ROI Tracking)';
+            } else if (token.symbol === 'ADA') {
+                cardStyle = 'bg-gradient-to-r from-orange-600/20 to-orange-800/20 border-orange-500/30';
+                badge = '🔸 Cardano Token';
+            } else if (token.symbol === 'WLF') {
+                cardStyle = 'bg-gradient-to-r from-purple-600/20 to-purple-800/20 border-purple-500/30';
+                badge = '📍 World Liberty Financial';
+            } else if (token.symbol === 'XRP' || (token.address && token.address.toLowerCase() === '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE'.toLowerCase())) {
+                cardStyle = 'bg-gradient-to-r from-cyan-600/20 to-cyan-800/20 border-cyan-500/30';
+                badge = '💎 XRP Token';
+            }
+
+            return `
+                <div class="rounded-xl p-4 backdrop-blur-sm border ${cardStyle}">
+                    <div class="mb-3">
+                        <h3 class="text-lg font-bold text-white truncate">${token.name}</h3>
+                        <p class="text-gray-400 text-sm">${token.symbol}</p>
+                        ${badge ? `<span class="inline-block mt-1 text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">${badge}</span>` : ''}
+                    </div>
+                    <div class="mb-3">
+                        <p class="text-xl font-bold text-white">$${valueUSD.toFixed(2)}</p>
+                        <p class="text-gray-400 text-xs">@$${priceNum.toFixed(6)}</p>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-2">
+                        <p class="text-gray-400 text-xs">Balance</p>
+                        <p class="text-white font-mono text-sm">${parseFloat(token.balance).toFixed(2)} ${token.symbol}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ================================
+        // MAIN LOAD DATA FUNCTION
+        // ================================
+        async function loadAllData() {
+            if (!userAddress) return;
+
+            try {
+                showLoading('Loading BNB balance...');
+                
+                const [bnbBalance, bnbPrice] = await Promise.all([
+                    getBNBBalance(),
+                    getBNBPrice()
+                ]);
+
+                const bnbBalanceNum = parseFloat(bnbBalance);
+                let totalValue = bnbBalanceNum * bnbPrice;
+                let tokens = [];
+                const processedAddresses = new Set();
+
+                if (bnbBalanceNum > 0) {
+                    tokens.push({
+                        name: 'Binance Coin',
+                        symbol: 'BNB',
+                        balance: bnbBalance,
+                        price: bnbPrice,
+                        address: 'BNB'
+                    });
+                }
+
+                showLoading('Processing specific tokens: Xtoom, Cardano, WLF...');
+                
+                // Get contract balance for dividend tracking
+                contractXtoomBalance = await getContractXtoomBalance();
+                
+                for (const specificToken of SPECIFIC_TOKENS) {
+                    try {
+                        const tokenInfo = {
+                            address: specificToken.address,
+                            name: specificToken.name,
+                            symbol: specificToken.symbol,
+                            decimals: 18
+                        };
+
+                        const actualTokenInfo = await getBasicTokenInfo(specificToken.address);
+                        const balance = await getTokenBalance(specificToken.address, actualTokenInfo.decimals || 18);
+                        const balanceNum = parseFloat(balance);
+                        
+                        if (balanceNum > 0) {
+                            const price = await getTokenPriceBySymbol(tokenInfo.symbol, specificToken.address);
+                            const tokenValue = balanceNum * price;
+                            totalValue += tokenValue;
+                            
+                            if (specificToken.isTarget) {
+                                xtoomCurrentValue = tokenValue;
+                                xtoomBalance = balanceNum;
+                                console.log(`Xtoom tracking - Balance: ${balanceNum} tokens, Value: $${xtoomCurrentValue}`);
+                            }
+                            
+                            tokens.push({
+                                ...tokenInfo,
+                                balance: balance,
+                                price: price,
+                                isTarget: specificToken.isTarget || false,
+                                decimals: actualTokenInfo.decimals || 18
+                            });
+                            
+                            processedAddresses.add(specificToken.address.toLowerCase());
+                        }
+                    } catch (error) {
+                        console.error('Error processing specific token:', specificToken.name, error);
+                    }
+                }
+
+                showLoading('Finding additional tokens...');
+                await getAdditionalTokensComplete(tokens, totalValue, processedAddresses);
+
+                document.getElementById('totalBalance').textContent = '$' + totalValue.toFixed(2);
+                document.getElementById('tokenCount').textContent = tokens.length;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+                const tokensGrid = document.getElementById('tokensGrid');
+                tokensGrid.innerHTML = tokens.map(createTokenCard).join('');
+
+                if (currentUserData && xtoomCurrentValue > 0) {
+                    updateROIAPYDisplay(xtoomCurrentValue, currentUserData);
+                }
+
+                // Update investor level display (always show, even if 0)
+                updateInvestorLevelDisplay(xtoomBalance);
+                
+                // Update dividend tracker display
+                updateDividendTrackerDisplay(contractXtoomBalance, xtoomBalance);
+
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                hideLoading();
+            }
+        }
+
+        async function getAdditionalTokensComplete(tokens, totalValue, processedAddresses) {
+            try {
+                const url = `${BSCSCAN_API}?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=999999999&page=1&offset=50&sort=asc`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === '1' && data.result) {
+                    const uniqueTokens = new Map();
+                    
+                    data.result.forEach(tx => {
+                        if (tx.contractAddress && tx.contractAddress !== '') {
+                            const address = tx.contractAddress.toLowerCase();
+                            
+                            if (!processedAddresses.has(address)) {
+                                let tokenInfo = {
+                                    address: tx.contractAddress,
+                                    name: tx.tokenName || 'Unknown Token',
+                                    symbol: tx.tokenSymbol || 'UNK',
+                                    decimals: parseInt(tx.tokenDecimal) || 18
+                                };
+                                
+                                tokenInfo = applyNameOverrides(tokenInfo);
+                                uniqueTokens.set(address, tokenInfo);
+                            }
+                        }
+                    });
+                    
+                    for (const [address, tokenInfo] of uniqueTokens) {
+                        try {
+                            const balance = await getTokenBalance(tokenInfo.address, tokenInfo.decimals);
+                            const balanceNum = parseFloat(balance);
+                            
+                            if (balanceNum > 0) {
+                                const price = await getTokenPriceBySymbol(tokenInfo.symbol, tokenInfo.address);
+                                
+                                tokens.push({
+                                    ...tokenInfo,
+                                    balance: balance,
+                                    price: price
+                                });
+                            }
+                        } catch (error) {
+                            console.error(`Error processing additional token ${address}:`, error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting additional tokens:', error);
+            }
+        }
+
+        // ================================
+        // EVENT LISTENERS
+        // ================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update cloud status on page load
+            updateCloudStatus(isCloudConnected ? '☁️ Cloud DB' : '💾 Local');
+
+            // Connect wallet button
+            document.getElementById('connectButton').addEventListener('click', async function() {
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        showLoading('Connecting wallet...');
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        
+                        if (accounts.length > 0) {
+                            userAddress = accounts[0];
+                            isConnected = true;
+                            
+                            showLoading('Loading investor data...');
+                            // Load user data from cloud or local
+                            currentUserData = await getInvestorData(userAddress);
+                            
+                            if (currentUserData === null) {
+                                // First time user
+                                hideLoading();
+                                showFirstTimeModal();
+                            } else {
+                                // Existing user - load everything
+                                updateInvestorInfoDisplay(currentUserData);
+                                updateConnectionStatus(true);
+                                await loadAllData();
+                            }
+                        } else {
+                            hideLoading();
+                        }
+                    } catch (error) {
+                        console.error('Error connecting wallet:', error);
+                        hideLoading();
+                        alert('Error connecting to MetaMask. Make sure MetaMask is installed.');
+                    }
+                } else {
+                    alert('MetaMask not detected. Please install MetaMask to continue.');
+                }
+            });
+
+            // First time form submission
+            document.getElementById('firstTimeForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('userNameInput').value;
+                const initialInvestment = parseFloat(document.getElementById('initialInvestmentInput').value);
+                const initialDate = document.getElementById('initialDateInput').value;
+                
+                if (name && initialInvestment && initialDate) {
+                    showLoading('Saving investor data...');
+                    
+                    currentUserData = {
+                        name,
+                        initialInvestment,
+                        initialDate,
+                        walletAddress: userAddress
+                    };
+                    
+                    try {
+                        await saveInvestorData(userAddress, currentUserData);
+                        updateInvestorInfoDisplay(currentUserData);
+                        hideFirstTimeModal();
+                        updateConnectionStatus(true);
+                        await loadAllData();
+                    } catch (error) {
+                        console.error('Error saving data:', error);
+                        hideLoading();
+                        alert('Error saving data. Please try again.');
+                    }
+                }
+            });
+
+            // Edit user info button
+            document.getElementById('editUserInfo').addEventListener('click', function() {
+                if (currentUserData) {
+                    showEditModal(currentUserData);
+                }
+            });
+
+            // Edit form submission
+            document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('editUserNameInput').value;
+                const initialInvestment = parseFloat(document.getElementById('editInitialInvestmentInput').value);
+                const initialDate = document.getElementById('editInitialDateInput').value;
+                
+                if (name && initialInvestment && initialDate) {
+                    currentUserData = {
+                        ...currentUserData,
+                        name,
+                        initialInvestment,
+                        initialDate
+                    };
+                    
+                    await saveInvestorData(userAddress, currentUserData);
+                    updateInvestorInfoDisplay(currentUserData);
+                    
+                    if (xtoomCurrentValue > 0) {
+                        updateROIAPYDisplay(xtoomCurrentValue, currentUserData);
+                    }
+                    
+                    hideEditModal();
+                }
+            });
+
+            // Cancel edit button
+            document.getElementById('cancelEditBtn').addEventListener('click', function() {
+                hideEditModal();
+            });
+
+            // Buy/Sell button
+            document.getElementById('buySellBtn').addEventListener('click', function() {
+                const matcha_url = 'https://matcha.xyz/tokens/bsc/0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a';
+                window.open(matcha_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            });
+
+            // Chart button
+            document.getElementById('chartBtn').addEventListener('click', function() {
+                const chartUrl = 'https://www.geckoterminal.com/bsc/pools/0x934a02c24699598daef464cd0fbc81c57f262fa0';
+                document.getElementById('chartIframe').src = chartUrl;
+                document.getElementById('chartModal').classList.remove('hidden');
+            });
+
+            // Close chart modal
+            document.getElementById('closeChartModal').addEventListener('click', function() {
+                document.getElementById('chartModal').classList.add('hidden');
+                document.getElementById('chartIframe').src = ''; // Stop loading iframe
+            });
+
+            // Close modal when clicking outside
+            document.getElementById('chartModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                    document.getElementById('chartIframe').src = '';
+                }
+            });
+
+            // Handle MetaMask events
+            if (typeof window.ethereum !== 'undefined') {
+                window.ethereum.on('accountsChanged', function(accounts) {
+                    if (accounts.length === 0) {
+                        userAddress = null;
+                        isConnected = false;
+                        currentUserData = null;
+                        xtoomCurrentValue = 0;
+                        updateConnectionStatus(false);
+                    } else if (accounts[0] !== userAddress) {
+                        location.reload();
+                    }
+                });
+
+                window.ethereum.on('chainChanged', function(chainId) {
+                    if (chainId !== BSC_CHAIN_ID) {
+                        alert('Please switch to Binance Smart Chain (BSC) in MetaMask');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
