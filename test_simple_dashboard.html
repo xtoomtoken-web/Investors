@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard - Simple</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white text-center sm:text-left">Investor Tracking - Test</h1>
+            <div class="flex justify-center sm:justify-end">
+                <button id="connectButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center space-x-2 w-full sm:w-auto justify-center">
+                    <span>Connect Wallet</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <button id="historyBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>XTOO History</span>
+            </button>
+        </div>
+
+        <!-- XTOO History Modal -->
+        <div id="historyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] border border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
+                <div class="flex items-center justify-between p-3 sm:p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">🕐 XTOO Transaction History</h2>
+                    <button id="closeHistoryModal" class="text-gray-400 hover:text-white text-2xl transition-colors">×</button>
+                </div>
+                <div class="p-4 max-h-[75vh] sm:max-h-[70vh] overflow-y-auto">
+                    <div id="historyContent">
+                        <div class="text-center py-8">
+                            <p class="text-gray-400">Click button to load history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userAddress = "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2"; // Test address
+        
+        // Mock data for testing
+        const mockTransactions = [
+            {
+                hash: "0x726c5a8b7324ec56c5045d27e0f5368c4f08c25bd00d831c8bc0afcfac3dc99c",
+                from: "0xa5D396494eFEc679d9BA8D9b3565a60c1234567890",
+                to: "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2",
+                value: "29100000000000000000",  // 29.1 XTOO
+                tokenAmount: "29.1", // Amount real que tú mencionaste ✅
+                tokenDecimal: "18",
+                tokenSymbol: "XTOO",
+                tokenName: "Xtoom Token",
+                timeStamp: Math.floor(Date.now() / 1000) - (12 * 24 * 3600),
+                contractAddress: "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a"
+            }
+            // Solo dejamos el example real que mencionaste
+        ];
+
+        function getTimeAgo(timestamp) {
+            const now = Date.now();
+            const txDate = parseInt(timestamp) * 1000;
+            const diffMs = now - txDate;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                if (diffHours === 0) {
+                    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+                }
+                return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+            } else if (diffDays === 1) {
+                return '1 day ago';
+            } else {
+                return `${diffDays} days ago`;
+            }
+        }
+
+        function displayXTOOTransactions(transactions) {
+            const historyContent = document.getElementById('historyContent');
+            
+            // Filter for ONLY incoming (IN) transactions to the connected wallet
+            const incomingTransactions = transactions.filter(tx => 
+                tx.to && tx.to.toLowerCase() === userAddress.toLowerCase()
+            );
+            
+            if (incomingTransactions.length === 0) {
+                historyContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-6xl mb-4">📭</div>
+                        <h3 class="text-xl font-bold text-white mb-2">No XTOO Transactions Found</h3>
+                        <p class="text-gray-400 mb-4">This wallet has no incoming XTOO transactions.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const totalReceived = incomingTransactions.reduce((sum, tx) => {
+                return sum + (parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18)));
+            }, 0);
+            
+            const header = `
+                <div class="mb-6">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                        <div class="text-center">
+                            <div class="text-sm font-semibold text-emerald-400">🔍 Filter Applied</div>
+                            <div class="text-xs text-gray-300 mt-1">Method: Transfer, IN: ${userAddress}, Token: Xtoom (XTOO)</div>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-4">📊 XTOO Incoming Transaction Summary</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
+                            <div class="text-emerald-400 font-bold text-xl">${incomingTransactions.length}</div>
+                            <div class="text-xs text-gray-400">Total IN Transactions</div>
+                        </div>
+                        <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 text-center">
+                            <div class="text-purple-400 font-bold text-xl">${totalReceived.toFixed(1)}</div>
+                            <div class="text-xs text-gray-400">Total Xtoom (XTOO) Received</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const transactionsList = incomingTransactions.slice(0, 10).map((tx, index) => {
+                // Usar tokenAmount si existe, si no usar el value convertido
+                let xtooAmount;
+                if (tx.tokenAmount) {
+                    xtooAmount = parseFloat(tx.tokenAmount);
+                } else {
+                    xtooAmount = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18));
+                }
+                
+                // Formatear amount (no fee) como BSCScan
+                let formattedAmount;
+                if (xtooAmount % 1 === 0) {
+                    formattedAmount = xtooAmount.toString();
+                } else if (xtooAmount >= 1) {
+                    formattedAmount = xtooAmount.toFixed(1); // Para amounts >= 1, mostrar 1 decimal
+                } else {
+                    formattedAmount = xtooAmount.toFixed(6).replace(/\.?0+$/, '');
+                }
+                
+                const timeAgo = getTimeAgo(tx.timeStamp);
+                const fromAddress = tx.from;
+                
+                return `
+                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 transition-colors mb-3">
+                        <div class="text-white font-mono text-sm leading-relaxed">
+                            Transfer ${timeAgo} IN ${userAddress} ${formattedAmount} Xtoom (XTOO)
+                        </div>
+                        <div class="mt-3 text-xs text-gray-400 grid grid-cols-1 gap-2">
+                            <div>From: <span class="font-mono text-gray-300">${fromAddress}</span></div>
+                            <div>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank" class="text-purple-400 hover:underline font-mono">${tx.hash}</a></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            historyContent.innerHTML = header + `
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-3">📋 Recent Transactions (Latest ${Math.min(incomingTransactions.length, 10)})</h3>
+                    ${transactionsList}
+                    ${incomingTransactions.length > 10 ? `<div class="text-center text-gray-400 text-sm mt-4">... and ${incomingTransactions.length - 10} more incoming transactions</div>` : ''}
+                    <div class="mt-6 text-center">
+                        <button onclick="window.open('https://bscscan.com/address/${userAddress}#tokentxns', '_blank')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
+                            🔗 View complete history on BSCScan ↗
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadXTOOHistory() {
+            const historyContent = document.getElementById('historyContent');
+            
+            // Show loading
+            historyContent.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading XTOO transaction history...</p>
+                    <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mt-4 mx-auto max-w-md">
+                        <p class="text-xs text-gray-400 mb-1">🔍 Filter: Method: Transfer, IN: ${userAddress.substring(0, 8)}...${userAddress.substring(userAddress.length - 6)}</p>
+                        <p class="text-xs text-purple-300">Token: Xtoom (XTOO)</p>
+                    </div>
+                </div>
+            `;
+
+            // Simulate loading delay
+            setTimeout(() => {
+                displayXTOOTransactions(mockTransactions);
+            }, 1500);
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // History button
+            document.getElementById('historyBtn').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.remove('hidden');
+                loadXTOOHistory();
+            });
+
+            // Close history modal
+            document.getElementById('closeHistoryModal').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.add('hidden');
+            });
+
+            // Close history modal when clicking outside
+            document.getElementById('historyModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+
+            // Connect button (mock)
+            document.getElementById('connectButton').addEventListener('click', function() {
+                this.innerHTML = '<span>✅ Connected: 0xe2fE...d2d2</span>';
+                this.classList.add('bg-green-600');
+                this.classList.remove('bg-blue-600');
+            });
+        });
+    </script>
+</body>
+</html>

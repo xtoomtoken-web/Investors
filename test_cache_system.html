@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache System Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white p-8">
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center">🧪 API Cache System Test</h1>
+        
+        <div class="bg-slate-800/50 rounded-2xl p-6 backdrop-blur-sm border border-white/10 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Cache Statistics</h2>
+            <div id="cacheStats" class="text-gray-300">Loading...</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <button id="testPriceAPI" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-semibold">
+                🔄 Test Price API (with cache)
+            </button>
+            
+            <button id="clearCache" class="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-xl font-semibold">
+                🗑️ Clear Cache
+            </button>
+        </div>
+
+        <div class="bg-slate-800/50 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
+            <h2 class="text-xl font-semibold mb-4">Test Results</h2>
+            <div id="testResults" class="text-gray-300 space-y-2">
+                <p>Click the buttons above to test the cache system.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Copy of the cache system from main dashboard
+        class APICache {
+            constructor() {
+                this.cache = new Map();
+                this.cacheTimeouts = new Map();
+                this.defaultTTL = 5 * 60 * 1000;
+                this.ttlConfig = {
+                    'token_prices': 2 * 60 * 1000,
+                    'token_balances': 3 * 60 * 1000,
+                    'contract_calls': 5 * 60 * 1000,
+                    'transaction_history': 10 * 60 * 1000,
+                    'user_data': 15 * 60 * 1000
+                };
+            }
+
+            generateKey(url, params = {}) {
+                const paramString = Object.keys(params).sort().map(key => `${key}=${params[key]}`).join('&');
+                return `${url}${paramString ? '?' + paramString : ''}`;
+            }
+
+            getTTL(cacheType) {
+                return this.ttlConfig[cacheType] || this.defaultTTL;
+            }
+
+            set(key, data, cacheType = 'default') {
+                const ttl = this.getTTL(cacheType);
+                this.cache.set(key, {
+                    data,
+                    timestamp: Date.now(),
+                    cacheType
+                });
+
+                if (this.cacheTimeouts.has(key)) {
+                    clearTimeout(this.cacheTimeouts.get(key));
+                }
+
+                const timeout = setTimeout(() => {
+                    this.delete(key);
+                }, ttl);
+                this.cacheTimeouts.set(key, timeout);
+
+                console.log(`💾 Cache SET: ${key} (TTL: ${ttl/1000}s, Type: ${cacheType})`);
+                this.updateStats();
+            }
+
+            get(key) {
+                const cached = this.cache.get(key);
+                if (!cached) return null;
+
+                const age = Date.now() - cached.timestamp;
+                const ttl = this.getTTL(cached.cacheType);
+                
+                if (age > ttl) {
+                    this.delete(key);
+                    return null;
+                }
+
+                console.log(`🎯 Cache HIT: ${key} (age: ${Math.round(age/1000)}s)`);
+                this.updateStats();
+                return cached.data;
+            }
+
+            delete(key) {
+                this.cache.delete(key);
+                if (this.cacheTimeouts.has(key)) {
+                    clearTimeout(this.cacheTimeouts.get(key));
+                    this.cacheTimeouts.delete(key);
+                }
+                console.log(`🗑️ Cache DELETE: ${key}`);
+                this.updateStats();
+            }
+
+            clear() {
+                for (const timeout of this.cacheTimeouts.values()) {
+                    clearTimeout(timeout);
+                }
+                this.cache.clear();
+                this.cacheTimeouts.clear();
+                console.log('🧹 Cache CLEARED');
+                this.updateStats();
+            }
+
+            getStats() {
+                return {
+                    size: this.cache.size,
+                    entries: Array.from(this.cache.entries()).map(([key, value]) => ({
+                        key: key.substring(0, 50) + (key.length > 50 ? '...' : ''),
+                        age: Math.round((Date.now() - value.timestamp) / 1000),
+                        cacheType: value.cacheType
+                    }))
+                };
+            }
+
+            updateStats() {
+                const stats = this.getStats();
+                const statsDiv = document.getElementById('cacheStats');
+                if (statsDiv) {
+                    const byType = stats.entries.reduce((acc, entry) => {
+                        acc[entry.cacheType] = (acc[entry.cacheType] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    statsDiv.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-400">${stats.size}</div>
+                                <div class="text-sm">Total Cached Items</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-400">${Object.keys(byType).length}</div>
+                                <div class="text-sm">Cache Types Used</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-yellow-400">${stats.entries.length > 0 ? Math.max(...stats.entries.map(e => e.age)) : 0}s</div>
+                                <div class="text-sm">Oldest Entry</div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="font-semibold mb-2">Cache Breakdown:</h3>
+                            ${Object.entries(byType).map(([type, count]) => 
+                                `<div class="text-sm">• ${type}: ${count} items</div>`
+                            ).join('')}
+                        </div>
+                        ${stats.entries.length > 0 ? `
+                        <div class="mt-4">
+                            <h3 class="font-semibold mb-2">Recent Entries:</h3>
+                            <div class="text-xs space-y-1 max-h-40 overflow-y-auto">
+                                ${stats.entries.slice(0, 5).map(entry => 
+                                    `<div>• ${entry.key} (${entry.age}s old, ${entry.cacheType})</div>`
+                                ).join('')}
+                            </div>
+                        </div>` : ''}
+                    `;
+                }
+            }
+        }
+
+        const apiCache = new APICache();
+
+        async function cachedFetch(url, options = {}, cacheType = 'default') {
+            const cacheKey = apiCache.generateKey(url, options.params || {});
+            
+            const cachedData = apiCache.get(cacheKey);
+            if (cachedData) {
+                return cachedData;
+            }
+
+            try {
+                console.log(`🌐 API CALL: ${url} (Cache: MISS)`);
+                addTestResult(`🌐 API CALL: ${url.substring(0, 60)}... (Cache: MISS)`, 'text-blue-400');
+                
+                const response = await fetch(url, options);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                apiCache.set(cacheKey, data, cacheType);
+                addTestResult(`💾 Cached response for future use (TTL: ${apiCache.getTTL(cacheType)/1000}s)`, 'text-green-400');
+                
+                return data;
+            } catch (error) {
+                console.error(`API Error: ${url}`, error);
+                addTestResult(`❌ API Error: ${error.message}`, 'text-red-400');
+                
+                const expiredCache = apiCache.cache.get(cacheKey);
+                if (expiredCache) {
+                    console.log(`⚠️ Using expired cache as fallback`);
+                    addTestResult(`⚠️ Using expired cache as fallback`, 'text-yellow-400');
+                    return expiredCache.data;
+                }
+                
+                throw error;
+            }
+        }
+
+        function addTestResult(message, className = 'text-gray-300') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const resultItem = document.createElement('div');
+            resultItem.className = `${className} text-sm`;
+            resultItem.textContent = `[${timestamp}] ${message}`;
+            resultsDiv.appendChild(resultItem);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function testPriceAPI() {
+            addTestResult('🧪 Testing BNB Price API with cache system...', 'text-white font-semibold');
+            
+            const startTime = Date.now();
+            
+            try {
+                // First call
+                const data1 = await cachedFetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd', {}, 'token_prices');
+                const time1 = Date.now() - startTime;
+                addTestResult(`✅ First call completed in ${time1}ms - BNB Price: $${data1.binancecoin.usd}`, 'text-green-400');
+                
+                // Second call (should be cached)
+                const start2 = Date.now();
+                const data2 = await cachedFetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd', {}, 'token_prices');
+                const time2 = Date.now() - start2;
+                addTestResult(`🎯 Second call completed in ${time2}ms (${time2 < 50 ? 'CACHE HIT!' : 'Cache miss'})`, time2 < 50 ? 'text-green-400' : 'text-yellow-400');
+                
+                addTestResult(`⚡ Performance improvement: ${Math.round(((time1 - time2) / time1) * 100)}% faster`, 'text-blue-400');
+                
+            } catch (error) {
+                addTestResult(`❌ Test failed: ${error.message}`, 'text-red-400');
+            }
+        }
+
+        function clearCache() {
+            apiCache.clear();
+            addTestResult('🧹 Cache cleared successfully', 'text-yellow-400');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testPriceAPI').addEventListener('click', testPriceAPI);
+            document.getElementById('clearCache').addEventListener('click', clearCache);
+            
+            // Initialize stats display
+            apiCache.updateStats();
+            
+            addTestResult('🚀 Cache system test page loaded', 'text-green-400');
+            addTestResult('💡 Click "Test Price API" to see cache in action', 'text-gray-400');
+        });
+    </script>
+</body>
+</html>

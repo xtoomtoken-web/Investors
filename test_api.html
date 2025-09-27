@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test BSCScan API</title>
+</head>
+<body>
+    <h1>Testing BSCScan API</h1>
+    <button onclick="testAPI()">Test API Call</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const userAddress = '0xe2fee19314e1f572c4dffe669c62dd5bcbb9d2d2';
+            const apiKey = '1SBKZNRWAU5MS3Q2VQXFMUZWMGKJRSGF5M';
+            const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${userAddress}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+            
+            console.log('Testing URL:', url);
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                console.log('Response:', data);
+                document.getElementById('result').innerHTML = `
+                    <h3>API Response:</h3>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <p><strong>Message:</strong> ${data.message}</p>
+                    <p><strong>Results:</strong> ${data.result ? data.result.length : 0} transactions</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

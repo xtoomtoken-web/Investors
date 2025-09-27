@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Conexión Billetera</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a2e;
+            color: white;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #2d3748;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #38a169;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #e53e3e;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        #log {
+            background: #2d3748;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Test de Conexión de Billetera</h1>
+    
+    <div class="info">
+        <h3>Estado del Sistema:</h3>
+        <p>MetaMask: <span id="metamaskStatus">❓ Verificando...</span></p>
+        <p>Red: <span id="networkStatus">❓ No conectado</span></p>
+        <p>Dirección: <span id="addressStatus">❓ No conectado</span></p>
+    </div>
+    
+    <button class="btn" onclick="detectMetaMask()">🔍 Detectar MetaMask</button>
+    <button class="btn" onclick="connectWallet()">🔗 Conectar Billetera</button>
+    <button class="btn" onclick="getNetwork()">🌐 Ver Red Actual</button>
+    <button class="btn" onclick="switchToBSC()">🔄 Cambiar a BSC</button>
+    <button class="btn" onclick="clearLog()">🧹 Limpiar Log</button>
+    
+    <div class="info">
+        <h3>Log de Actividad:</h3>
+        <div id="log">Iniciando sistema...</div>
+    </div>
+
+    <script>
+        let provider = null;
+        let userAddress = null;
+
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(element, message, isSuccess = true) {
+            const statusElement = document.getElementById(element);
+            statusElement.textContent = isSuccess ? `✅ ${message}` : `❌ ${message}`;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+            log('Log limpiado');
+        }
+
+        function detectMetaMask() {
+            log('Detectando MetaMask...');
+            
+            if (typeof window.ethereum !== 'undefined') {
+                log('✅ MetaMask detectado!');
+                log(`Provider: ${window.ethereum.constructor.name}`);
+                log(`Versión: ${window.ethereum.version || 'No disponible'}`);
+                updateStatus('metamaskStatus', 'Detectado');
+                
+                // Verificar si es MetaMask
+                if (window.ethereum.isMetaMask) {
+                    log('✅ Confirmado: Es MetaMask');
+                } else {
+                    log('⚠️  Es otro proveedor Web3');
+                }
+                
+            } else {
+                log('❌ MetaMask no detectado');
+                log('Por favor instala MetaMask desde https://metamask.io');
+                updateStatus('metamaskStatus', 'No encontrado', false);
+            }
+        }
+
+        async function connectWallet() {
+            log('Intentando conectar billetera...');
+            
+            if (typeof window.ethereum === 'undefined') {
+                log('❌ MetaMask no disponible');
+                return;
+            }
+
+            try {
+                log('Solicitando cuentas...');
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts.length === 0) {
+                    log('❌ No se seleccionaron cuentas');
+                    return;
+                }
+
+                userAddress = accounts[0];
+                log(`✅ Conectado a: ${userAddress}`);
+                updateStatus('addressStatus', userAddress);
+                
+                log('Creando provider...');
+                // Intentar crear provider sin ethers primero
+                log('✅ Provider básico creado');
+                
+                await getNetwork();
+                
+            } catch (error) {
+                log(`❌ Error conectando: ${error.message}`);
+                log(`Código de error: ${error.code}`);
+                updateStatus('addressStatus', 'Error al conectar', false);
+            }
+        }
+
+        async function getNetwork() {
+            if (typeof window.ethereum === 'undefined') {
+                log('❌ MetaMask no disponible para consultar red');
+                return;
+            }
+
+            try {
+                log('Obteniendo información de red...');
+                
+                const chainId = await window.ethereum.request({ 
+                    method: 'eth_chainId' 
+                });
+                
+                const chainIdDecimal = parseInt(chainId, 16);
+                log(`Red actual: Chain ID ${chainIdDecimal} (${chainId})`);
+                
+                let networkName = 'Desconocida';
+                switch (chainIdDecimal) {
+                    case 1:
+                        networkName = 'Ethereum Mainnet';
+                        break;
+                    case 56:
+                        networkName = 'Binance Smart Chain';
+                        break;
+                    case 137:
+                        networkName = 'Polygon';
+                        break;
+                    case 5:
+                        networkName = 'Goerli Testnet';
+                        break;
+                }
+                
+                log(`Nombre de red: ${networkName}`);
+                updateStatus('networkStatus', `${networkName} (${chainIdDecimal})`);
+                
+                if (chainIdDecimal === 56) {
+                    log('✅ Ya estás en BSC!');
+                } else {
+                    log('⚠️  No estás en BSC (Chain ID 56)');
+                }
+                
+            } catch (error) {
+                log(`❌ Error obteniendo red: ${error.message}`);
+                updateStatus('networkStatus', 'Error', false);
+            }
+        }
+
+        async function switchToBSC() {
+            if (typeof window.ethereum === 'undefined') {
+                log('❌ MetaMask no disponible');
+                return;
+            }
+
+            try {
+                log('Cambiando a Binance Smart Chain...');
+                
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x38' }], // 56 en hexadecimal
+                });
+                
+                log('✅ Cambio exitoso a BSC');
+                await getNetwork();
+                
+            } catch (error) {
+                if (error.code === 4902) {
+                    log('⚠️  BSC no está agregado, agregando...');
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0x38',
+                                chainName: 'Binance Smart Chain',
+                                nativeCurrency: {
+                                    name: 'BNB',
+                                    symbol: 'BNB',
+                                    decimals: 18
+                                },
+                                rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                                blockExplorerUrls: ['https://bscscan.com/']
+                            }]
+                        });
+                        log('✅ BSC agregado exitosamente');
+                        await getNetwork();
+                    } catch (addError) {
+                        log(`❌ Error agregando BSC: ${addError.message}`);
+                    }
+                } else {
+                    log(`❌ Error cambiando a BSC: ${error.message}`);
+                    log(`Código: ${error.code}`);
+                }
+            }
+        }
+
+        // Eventos de MetaMask
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                log(`Cuenta cambiada a: ${accounts[0] || 'Ninguna'}`);
+                userAddress = accounts[0] || null;
+                updateStatus('addressStatus', userAddress || 'Desconectado');
+            });
+
+            window.ethereum.on('chainChanged', (chainId) => {
+                const chainIdDecimal = parseInt(chainId, 16);
+                log(`Red cambiada a: ${chainIdDecimal} (${chainId})`);
+                getNetwork();
+            });
+        }
+
+        // Auto-detección al cargar
+        window.addEventListener('load', () => {
+            log('Página cargada, iniciando detección automática...');
+            detectMetaMask();
+        });
+    </script>
+</body>
+</html>

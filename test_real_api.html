@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Real XTOO API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🔗 Test Real XTOO API</h1>
+        
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Configuración API Real</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Wallet Address:</label>
+                    <input type="text" id="walletAddress" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                           value="0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">XTOO Contract Address:</label>
+                    <input type="text" id="contractAddress" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                           value="0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a">
+                </div>
+                
+                <button id="testApiBtn" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                    🔍 Fetch Real XTOO History
+                </button>
+            </div>
+        </div>
+
+        <!-- API Status -->
+        <div id="apiStatus" class="max-w-4xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">API Status & Results</h3>
+                <div id="statusContent" class="text-sm text-gray-300">
+                    <p>Click "Fetch Real XTOO History" to start...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Results -->
+        <div id="transactionResults" class="max-w-4xl mx-auto">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">XTOO Transaction History</h3>
+                <div id="transactionContent" class="text-sm text-gray-300">
+                    <p>No data loaded yet...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function logStatus(message, data = null) {
+            const statusContent = document.getElementById('statusContent');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-2 p-2 bg-slate-700 rounded border-l-4 border-blue-500';
+            logEntry.innerHTML = `
+                <div class="text-xs text-gray-500">[${timestamp}]</div>
+                <div class="text-white">${message}</div>
+                ${data ? `<div class="text-xs text-gray-400 mt-1 font-mono max-h-32 overflow-y-auto">${JSON.stringify(data, null, 2)}</div>` : ''}
+            `;
+            statusContent.appendChild(logEntry);
+            statusContent.scrollTop = statusContent.scrollHeight;
+        }
+
+        function displayTransactions(transactions, walletAddress) {
+            const transactionContent = document.getElementById('transactionContent');
+            
+            // Filter for ONLY incoming (IN) transactions to the wallet
+            const filteredTransactions = transactions.filter(tx => {
+                const isIncoming = tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase();
+                const isXTOOToken = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a';
+                return isIncoming && isXTOOToken;
+            });
+
+            logStatus(`Filtered transactions (Method: Transfer, IN: wallet, Token: XTOO)`, {
+                total: transactions.length,
+                filtered: filteredTransactions.length
+            });
+
+            if (filteredTransactions.length === 0) {
+                transactionContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-6xl mb-4">📭</div>
+                        <h3 class="text-xl font-bold text-white mb-2">No XTOO IN Transactions Found</h3>
+                        <p class="text-gray-400 mb-4">No incoming XTOO transfers found for this wallet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Helper function para tiempo
+            function getTimeAgo(timestamp) {
+                const now = Date.now();
+                const txDate = parseInt(timestamp) * 1000;
+                const diffMs = now - txDate;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) {
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    if (diffHours === 0) {
+                        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                        return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+                    }
+                    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+                } else if (diffDays === 1) {
+                    return '1 day ago';
+                } else {
+                    return `${diffDays} days ago`;
+                }
+            }
+
+            const transactionsList = filteredTransactions.slice(0, 20).map((tx) => {
+                // Convertir amount de wei a XTOO
+                const xtooAmount = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18));
+                
+                // Formatear amount exactamente como BSCScan
+                let formattedAmount;
+                if (xtooAmount % 1 === 0) {
+                    formattedAmount = xtooAmount.toString();
+                } else if (xtooAmount >= 1) {
+                    formattedAmount = xtooAmount.toFixed(1);
+                } else {
+                    formattedAmount = xtooAmount.toFixed(8).replace(/\.?0+$/, '');
+                }
+                
+                const timeAgo = getTimeAgo(tx.timeStamp);
+                
+                // FORMATO EXACTO: "Transfer X days ago IN wallet amount Xtoom (XTOO)"
+                return `
+                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 transition-colors mb-3">
+                        <div class="text-white font-mono text-sm leading-relaxed mb-2">
+                            Transfer ${timeAgo} IN ${walletAddress} ${formattedAmount} Xtoom (XTOO)
+                        </div>
+                        <div class="text-xs text-gray-400 grid grid-cols-1 gap-1">
+                            <div>From: <span class="font-mono text-gray-300">${tx.from}</span></div>
+                            <div>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank" class="text-purple-400 hover:underline font-mono">${tx.hash}</a></div>
+                            <div>Block: <span class="font-mono text-gray-300">${tx.blockNumber}</span> | Gas: <span class="font-mono text-gray-300">${tx.gasUsed || 'N/A'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            transactionContent.innerHTML = `
+                <div class="mb-6">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                        <div class="text-center">
+                            <div class="text-sm font-semibold text-emerald-400">🔍 Filter Applied</div>
+                            <div class="text-xs text-gray-300 mt-1">Method: Transfer, IN: ${walletAddress}, Token: Xtoom (XTOO)</div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-4">📊 Found ${filteredTransactions.length} XTOO Transfer(s)</h3>
+                    ${transactionsList}
+                    ${filteredTransactions.length > 20 ? `
+                        <div class="text-center text-gray-400 text-sm mt-4 p-4 bg-slate-800/50 rounded-lg">
+                            Showing latest 20 of ${filteredTransactions.length} total transactions
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        async function fetchRealXTOOHistory() {
+            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const contractAddress = document.getElementById('contractAddress').value.trim();
+            
+            if (!walletAddress || !contractAddress) {
+                logStatus('❌ Error: Please provide both wallet and contract addresses');
+                return;
+            }
+
+            logStatus('🚀 Starting real API calls...', {
+                wallet: walletAddress,
+                contract: contractAddress
+            });
+
+            // Method 1: BSCScan API
+            try {
+                logStatus('📡 Method 1: BSCScan API...');
+                const bscScanUrl = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${contractAddress}&address=${walletAddress}&page=1&offset=100&sort=desc&apikey=YourApiKeyToken`;
+                
+                logStatus('🔗 API URL', bscScanUrl);
+                
+                const bscResponse = await fetch(bscScanUrl);
+                const bscData = await bscResponse.json();
+                
+                logStatus('📥 BSCScan API Response', {
+                    status: bscData.status,
+                    message: bscData.message,
+                    resultCount: bscData.result ? bscData.result.length : 0
+                });
+                
+                if (bscData.status === '1' && bscData.result && bscData.result.length > 0) {
+                    logStatus('✅ BSCScan API Success!', `Found ${bscData.result.length} transactions`);
+                    displayTransactions(bscData.result, walletAddress);
+                    return;
+                } else {
+                    logStatus('⚠️ BSCScan API no results', bscData.message || 'Unknown error');
+                }
+            } catch (error) {
+                logStatus('❌ BSCScan API Error', error.message);
+            }
+
+            // Method 2: Try generic token transactions endpoint
+            try {
+                logStatus('📡 Method 2: Generic token transactions...');
+                const genericUrl = `https://api.bscscan.com/api?module=account&action=tokentx&address=${walletAddress}&page=1&offset=100&sort=desc&apikey=YourApiKeyToken`;
+                
+                const genericResponse = await fetch(genericUrl);
+                const genericData = await genericResponse.json();
+                
+                logStatus('📥 Generic API Response', {
+                    status: genericData.status,
+                    message: genericData.message,
+                    resultCount: genericData.result ? genericData.result.length : 0
+                });
+                
+                if (genericData.status === '1' && genericData.result && genericData.result.length > 0) {
+                    // Filter for XTOO transactions
+                    const xtooTxs = genericData.result.filter(tx => 
+                        tx.contractAddress && tx.contractAddress.toLowerCase() === contractAddress.toLowerCase()
+                    );
+                    
+                    logStatus('✅ Generic API filtered results', `Found ${xtooTxs.length} XTOO transactions out of ${genericData.result.length} total`);
+                    
+                    if (xtooTxs.length > 0) {
+                        displayTransactions(xtooTxs, walletAddress);
+                        return;
+                    } else {
+                        logStatus('📋 All contracts found', genericData.result.slice(0, 5).map(tx => ({
+                            contract: tx.contractAddress,
+                            symbol: tx.tokenSymbol,
+                            name: tx.tokenName
+                        })));
+                    }
+                }
+            } catch (error) {
+                logStatus('❌ Generic API Error', error.message);
+            }
+
+            logStatus('💡 No XTOO transactions found or API limits reached', {
+                suggestion: 'Check if wallet has XTOO transactions or try again later',
+                bscscanLink: `https://bscscan.com/address/${walletAddress}#tokentxns`
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testApiBtn').addEventListener('click', fetchRealXTOOHistory);
+        });
+    </script>
+</body>
+</html>

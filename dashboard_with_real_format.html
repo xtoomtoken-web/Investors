@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Formato Real XTOO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white text-center sm:text-left">Investor Tracking - XTOO Real Format</h1>
+            <div class="flex justify-center sm:justify-end">
+                <button id="connectButton" class="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center space-x-2 w-full sm:w-auto justify-center">
+                    <span>✅ Connected: 0xe2fE...d2d2</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <button id="historyBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>XTOO History</span>
+            </button>
+            
+            <button class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <span>💰 Buy / Sell XTOO</span>
+            </button>
+            
+            <button class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L3.5 15.9l0 2.59z"/>
+                </svg>
+                <span>View XTOO Chart</span>
+            </button>
+        </div>
+
+        <!-- XTOO History Modal -->
+        <div id="historyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] border border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
+                <div class="flex items-center justify-between p-3 sm:p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">🕐 XTOO Transaction History (Real Format)</h2>
+                    <button id="closeHistoryModal" class="text-gray-400 hover:text-white text-2xl transition-colors">×</button>
+                </div>
+                <div class="p-4 max-h-[75vh] sm:max-h-[70vh] overflow-y-auto">
+                    <div id="historyContent">
+                        <div class="text-center py-8">
+                            <p class="text-gray-400">Click button to load history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Input Section -->
+        <div class="max-w-4xl mx-auto mt-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">📝 Add Real XTOO Transaction (Manual)</h3>
+                <p class="text-gray-400 mb-4">Since automatic extraction has CORS restrictions, you can manually add transactions from BSCScan:</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Amount (XTOO):</label>
+                        <input type="text" id="manualAmount" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
+                               placeholder="29.1"
+                               value="29.1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Time Ago:</label>
+                        <input type="text" id="manualTimeAgo" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
+                               placeholder="12 days ago"
+                               value="12 days ago">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">From Address:</label>
+                        <input type="text" id="manualFrom" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                               placeholder="0xa5D396494eFEc679d9BA8D9b3565a60c1234567890"
+                               value="0xa5D396494eFEc679d9BA8D9b3565a60c1234567890">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Transaction Hash:</label>
+                        <input type="text" id="manualHash" 
+                               class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                               placeholder="0x726c..."
+                               value="0x726c5a8b7324ec56c5045d27e0f5368c4f08c25bd00d831c8bc0afcfac3dc99c">
+                    </div>
+                </div>
+                
+                <button id="addManualBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg">
+                    ➕ Add Transaction
+                </button>
+                
+                <div class="mt-4 text-xs text-gray-500">
+                    <p><strong>Instructions:</strong></p>
+                    <p>1. Go to <a href="https://bscscan.com/address/0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2#tokentxns" target="_blank" class="text-purple-400 hover:underline">BSCScan Token Transfers ↗</a></p>
+                    <p>2. Look for "Xtoom (XTOO)" transactions with direction "IN"</p>
+                    <p>3. Copy the amount, time, from address, and hash here</p>
+                    <p>4. Click "Add Transaction" to see the exact format</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userAddress = "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2";
+        let transactions = [];
+
+        function displayTransactions() {
+            const historyContent = document.getElementById('historyContent');
+            
+            if (transactions.length === 0) {
+                historyContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-6xl mb-4">📭</div>
+                        <h3 class="text-xl font-bold text-white mb-2">No Transactions Added Yet</h3>
+                        <p class="text-gray-400 mb-4">Add real transactions from BSCScan using the form below</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const header = `
+                <div class="mb-6">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                        <div class="text-center">
+                            <div class="text-sm font-semibold text-emerald-400">✅ Filter Applied - Exact BSCScan Format</div>
+                            <div class="text-xs text-gray-300 mt-1">Method: Transfer, IN: ${userAddress}, Token: Xtoom (XTOO)</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const transactionsList = transactions.map((tx, index) => {
+                return `
+                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 transition-colors mb-3">
+                        <div class="text-white font-mono text-sm leading-relaxed mb-2">
+                            Transfer ${tx.timeAgo} IN ${userAddress} ${tx.amount} Xtoom (XTOO)
+                        </div>
+                        <div class="text-xs text-gray-400 grid grid-cols-1 gap-1">
+                            <div>From: <span class="font-mono text-gray-300">${tx.from}</span></div>
+                            <div>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank" class="text-purple-400 hover:underline font-mono">${tx.hash}</a></div>
+                        </div>
+                        <div class="text-right mt-2">
+                            <button onclick="removeTransaction(${index})" class="text-red-400 hover:text-red-300 text-xs">
+                                🗑️ Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            historyContent.innerHTML = header + `
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-4">📊 ${transactions.length} XTOO Transfer(s) Added</h3>
+                    ${transactionsList}
+                    <div class="mt-6 text-center text-gray-400 text-sm">
+                        <p>✅ Format matches BSCScan exactly</p>
+                        <p>Add more transactions using the form below</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addManualTransaction() {
+            const amount = document.getElementById('manualAmount').value.trim();
+            const timeAgo = document.getElementById('manualTimeAgo').value.trim();
+            const from = document.getElementById('manualFrom').value.trim();
+            const hash = document.getElementById('manualHash').value.trim();
+
+            if (!amount || !timeAgo || !from || !hash) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            transactions.push({
+                amount: amount,
+                timeAgo: timeAgo,
+                from: from,
+                hash: hash
+            });
+
+            displayTransactions();
+            
+            // Clear form
+            document.getElementById('manualAmount').value = '';
+            document.getElementById('manualTimeAgo').value = '';
+            document.getElementById('manualFrom').value = '';
+            document.getElementById('manualHash').value = '';
+        }
+
+        function removeTransaction(index) {
+            transactions.splice(index, 1);
+            displayTransactions();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // History button
+            document.getElementById('historyBtn').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.remove('hidden');
+                displayTransactions();
+            });
+
+            // Close history modal
+            document.getElementById('closeHistoryModal').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.add('hidden');
+            });
+
+            // Close history modal when clicking outside
+            document.getElementById('historyModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+
+            // Add manual transaction
+            document.getElementById('addManualBtn').addEventListener('click', addManualTransaction);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug XTOO History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🐛 Debug XTOO History</h1>
+        
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Test Configuration</h3>
+                
+                <!-- Wallet Address Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Test Wallet Address:</label>
+                    <input type="text" id="testAddress" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                           placeholder="0x... (enter a BSC wallet address with XTOO transactions)"
+                           value="0x1234567890123456789012345678901234567890">
+                </div>
+                
+                <!-- Test Button -->
+                <button id="testHistoryBtn" 
+                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                    🔍 Test XTOO History API
+                </button>
+            </div>
+        </div>
+
+        <!-- Debug Results -->
+        <div id="debugResults" class="max-w-4xl mx-auto">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Debug Output</h3>
+                <div id="debugContent" class="text-sm text-gray-300">
+                    <p>Click "Test XTOO History API" to start debugging...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- XTOO History Modal -->
+        <div id="historyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] border border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
+                <div class="flex items-center justify-between p-3 sm:p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">🕐 XTOO Transaction History (Debug)</h2>
+                    <button id="closeHistoryModal" class="text-gray-400 hover:text-white text-2xl transition-colors">×</button>
+                </div>
+                <div class="p-4 max-h-[75vh] sm:max-h-[70vh] overflow-y-auto">
+                    <div id="historyContent">
+                        <div class="text-center py-8">
+                            <p class="text-gray-400">Click test button to load history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const BSCSCAN_API = 'https://api.bscscan.com/api';
+        const BSCSCAN_API_KEY = 'YourApiKeyToken'; // We'll test without key first
+        const XTOO_ADDRESS = '0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a';
+        
+        let userAddress = null;
+        
+        // Debug logging function
+        function debugLog(message, data = null) {
+            const debugContent = document.getElementById('debugContent');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-2 p-2 bg-slate-700 rounded border-l-4 border-purple-500';
+            logEntry.innerHTML = `
+                <div class="text-xs text-gray-500">[${timestamp}]</div>
+                <div class="text-white">${message}</div>
+                ${data ? `<div class="text-xs text-gray-400 mt-1 font-mono">${JSON.stringify(data, null, 2)}</div>` : ''}
+            `;
+            debugContent.appendChild(logEntry);
+            debugContent.scrollTop = debugContent.scrollHeight;
+        }
+
+        async function testXTOOHistory() {
+            userAddress = document.getElementById('testAddress').value.trim();
+            
+            if (!userAddress) {
+                debugLog('❌ Error: Please enter a wallet address');
+                return;
+            }
+            
+            debugLog('🚀 Starting XTOO history test', { address: userAddress, contract: XTOO_ADDRESS });
+            
+            // Show modal
+            document.getElementById('historyModal').classList.remove('hidden');
+            
+            // Start loading
+            const historyContent = document.getElementById('historyContent');
+            historyContent.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading XTOO transaction history from BSC...</p>
+                    <p class="text-xs text-gray-500 mt-2">Address: ${userAddress.substring(0, 10)}...${userAddress.substring(userAddress.length - 10)}</p>
+                </div>
+            `;
+            
+            try {
+                // Method 1: Get all token transactions and filter
+                debugLog('📡 Method 1: Fetching all token transactions...');
+                const url1 = `${BSCSCAN_API}?module=account&action=tokentx&address=${userAddress}&page=1&offset=100&sort=desc`;
+                
+                debugLog('🔗 API URL', url1);
+                
+                const response1 = await fetch(url1);
+                const data1 = await response1.json();
+                
+                debugLog('📥 API Response Status', { status: data1.status, message: data1.message });
+                debugLog('📊 Raw Results Count', data1.result ? data1.result.length : 0);
+                
+                if (data1.status === '1' && data1.result && Array.isArray(data1.result)) {
+                    // Filter for XTOO transactions
+                    const xtooTransactions = data1.result.filter(tx => 
+                        tx.contractAddress && tx.contractAddress.toLowerCase() === XTOO_ADDRESS.toLowerCase()
+                    );
+                    
+                    debugLog('✅ XTOO Transactions Found', xtooTransactions.length);
+                    
+                    if (xtooTransactions.length > 0) {
+                        debugLog('📋 Sample XTOO Transaction', xtooTransactions[0]);
+                        displayXTOOTransactions(xtooTransactions);
+                        return;
+                    } else {
+                        debugLog('⚠️ No XTOO transactions in results, trying direct method...');
+                        // Show all contracts found for debugging
+                        const contracts = [...new Set(data1.result.map(tx => tx.contractAddress))];
+                        debugLog('📝 All Contract Addresses Found', contracts.slice(0, 10));
+                    }
+                } else {
+                    debugLog('❌ Method 1 Failed', data1);
+                }
+                
+                // Method 2: Direct contract query
+                debugLog('📡 Method 2: Direct contract query...');
+                const url2 = `${BSCSCAN_API}?module=account&action=tokentx&contractaddress=${XTOO_ADDRESS}&address=${userAddress}&page=1&offset=50&sort=desc`;
+                
+                debugLog('🔗 Direct API URL', url2);
+                
+                const response2 = await fetch(url2);
+                const data2 = await response2.json();
+                
+                debugLog('📥 Direct API Response', { status: data2.status, message: data2.message });
+                debugLog('📊 Direct Results Count', data2.result ? data2.result.length : 0);
+                
+                if (data2.status === '1' && data2.result && data2.result.length > 0) {
+                    debugLog('✅ Direct Method Success', data2.result[0]);
+                    displayXTOOTransactions(data2.result);
+                } else {
+                    debugLog('❌ No XTOO transactions found with either method');
+                    showNoTransactionsFound(data2);
+                }
+                
+            } catch (error) {
+                debugLog('💥 Exception Caught', error.message);
+                showError(error);
+            }
+        }
+        
+        function displayXTOOTransactions(transactions) {
+            const historyContent = document.getElementById('historyContent');
+            debugLog('🎨 Displaying transactions', transactions.length);
+            
+            // Calculate statistics
+            const received = transactions.filter(tx => tx.to.toLowerCase() === userAddress.toLowerCase());
+            const sent = transactions.filter(tx => tx.from.toLowerCase() === userAddress.toLowerCase());
+            
+            const header = `
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-white mb-4">📊 XTOO Transaction Summary</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                        <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 text-center">
+                            <div class="text-purple-400 font-bold text-xl">${transactions.length}</div>
+                            <div class="text-xs text-gray-400">Total Transactions</div>
+                        </div>
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
+                            <div class="text-emerald-400 font-bold text-xl">${received.length}</div>
+                            <div class="text-xs text-gray-400">Received</div>
+                        </div>
+                        <div class="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 text-center">
+                            <div class="text-orange-400 font-bold text-xl">${sent.length}</div>
+                            <div class="text-xs text-gray-400">Sent</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const transactionsList = transactions.slice(0, 5).map((tx, index) => {
+                const isReceived = tx.to.toLowerCase() === userAddress.toLowerCase();
+                const amount = (parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18))).toLocaleString();
+                const date = new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString();
+                const otherAddress = isReceived ? tx.from : tx.to;
+                
+                return `
+                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-3">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center ${isReceived ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}">
+                                ${isReceived ? '↓' : '↑'}
+                            </div>
+                            <div>
+                                <div class="font-bold ${isReceived ? 'text-emerald-400' : 'text-orange-400'}">
+                                    ${isReceived ? 'Received' : 'Sent'} ${amount} XTOO
+                                </div>
+                                <div class="text-sm text-gray-400">${date}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <div>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank" class="text-purple-400 hover:underline">${tx.hash.substring(0, 20)}...</a></div>
+                            <div>${isReceived ? 'From' : 'To'}: ${otherAddress.substring(0, 20)}...</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            historyContent.innerHTML = header + `
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-3">📋 Recent Transactions (Top 5)</h3>
+                    ${transactionsList}
+                    ${transactions.length > 5 ? `<div class="text-center text-gray-400 text-sm">... and ${transactions.length - 5} more transactions</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function showNoTransactionsFound(apiResponse) {
+            const historyContent = document.getElementById('historyContent');
+            historyContent.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-6xl mb-4">📭</div>
+                    <h3 class="text-xl font-bold text-white mb-2">No XTOO Transactions Found</h3>
+                    <p class="text-gray-400 mb-4">This wallet has no XTOO transaction history on BSC.</p>
+                    <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mt-4 text-left text-sm">
+                        <p class="text-gray-300 mb-2"><strong>Debug Info:</strong></p>
+                        <p class="text-gray-400">Contract: ${XTOO_ADDRESS}</p>
+                        <p class="text-gray-400">Address: ${userAddress}</p>
+                        <p class="text-gray-400">API Response: ${apiResponse.message || 'No message'}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showError(error) {
+            const historyContent = document.getElementById('historyContent');
+            historyContent.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-6xl mb-4">❌</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Error Loading History</h3>
+                    <p class="text-gray-400 mb-4">Could not load transaction history</p>
+                    <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-left text-sm">
+                        <p class="text-red-400">${error.message}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Clear debug log
+            document.getElementById('debugContent').innerHTML = '<p class="text-gray-400">Ready for testing...</p>';
+            
+            // Test button
+            document.getElementById('testHistoryBtn').addEventListener('click', testXTOOHistory);
+
+            // Close modal
+            document.getElementById('closeHistoryModal').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.add('hidden');
+            });
+
+            // Close modal when clicking outside
+            document.getElementById('historyModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

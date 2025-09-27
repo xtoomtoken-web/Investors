@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sin API Key</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🔍 Test API sin API Key</h1>
+        
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Probar APIs Públicas</h3>
+                
+                <button id="testBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                    🔍 Test API sin clave
+                </button>
+            </div>
+        </div>
+
+        <div id="results" class="max-w-4xl mx-auto">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Resultados</h3>
+                <div id="content" class="text-sm text-gray-300">
+                    <p>Haz clic para probar...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, data = null) {
+            const content = document.getElementById('content');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-2 p-2 bg-slate-700 rounded border-l-4 border-blue-500';
+            logEntry.innerHTML = `
+                <div class="text-xs text-gray-500">[${timestamp}]</div>
+                <div class="text-white">${message}</div>
+                ${data ? `<div class="text-xs text-gray-400 mt-1 font-mono">${JSON.stringify(data, null, 2)}</div>` : ''}
+            `;
+            content.appendChild(logEntry);
+            content.scrollTop = content.scrollHeight;
+        }
+
+        async function testApi() {
+            const walletAddress = "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2";
+            const contractAddress = "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a";
+
+            log('🚀 Probando APIs sin API key...');
+
+            // Test 1: Sin API key
+            try {
+                log('📡 Test 1: BSCScan sin API key...');
+                const url1 = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${contractAddress}&address=${walletAddress}&page=1&offset=10&sort=desc`;
+                
+                const response1 = await fetch(url1);
+                const data1 = await response1.json();
+                
+                log('📥 Respuesta sin API key', {
+                    status: data1.status,
+                    message: data1.message,
+                    result: data1.result ? data1.result.length : 'null'
+                });
+
+                if (data1.status === '1' && data1.result) {
+                    log('✅ ¡Funciona sin API key!', `${data1.result.length} transacciones encontradas`);
+                    return;
+                }
+            } catch (error) {
+                log('❌ Error sin API key', error.message);
+            }
+
+            // Test 2: URL alternativa
+            try {
+                log('📡 Test 2: URL alternativa...');
+                const url2 = `https://api.bscscan.com/api?module=account&action=tokentx&address=${walletAddress}&page=1&offset=10&sort=desc`;
+                
+                const response2 = await fetch(url2);
+                const data2 = await response2.json();
+                
+                log('📥 Respuesta alternativa', {
+                    status: data2.status,
+                    message: data2.message,
+                    result: data2.result ? data2.result.length : 'null'
+                });
+
+                if (data2.status === '1' && data2.result) {
+                    const xtooTxs = data2.result.filter(tx => 
+                        tx.contractAddress && tx.contractAddress.toLowerCase() === contractAddress.toLowerCase()
+                    );
+                    log('🔍 XTOO transactions encontradas', `${xtooTxs.length} de ${data2.result.length} total`);
+                }
+            } catch (error) {
+                log('❌ Error URL alternativa', error.message);
+            }
+
+            // Test 3: Verificar CORS y conectividad
+            try {
+                log('📡 Test 3: Verificar conectividad básica...');
+                const url3 = `https://api.bscscan.com/api?module=stats&action=ethsupply`;
+                
+                const response3 = await fetch(url3);
+                const data3 = await response3.json();
+                
+                log('📥 Test conectividad', {
+                    status: data3.status,
+                    message: data3.message
+                });
+            } catch (error) {
+                log('❌ Error conectividad', error.message);
+                log('💡 Posible problema de CORS o conexión');
+            }
+
+            log('❌ No se pudieron obtener datos de transacciones');
+            log('🔧 Soluciones sugeridas:', {
+                '1': 'Obtener API key real de BSCScan',
+                '2': 'Verificar que la wallet tenga transacciones XTOO',
+                '3': 'Probar desde un servidor en lugar de file://',
+                '4': 'Usar proxy CORS si es necesario'
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testBtn').addEventListener('click', testApi);
+        });
+    </script>
+</body>
+</html>

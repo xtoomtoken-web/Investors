@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test V2 Sin API Key</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🔑 Test V2 Sin API Key</h1>
+        
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Probando diferentes métodos</h3>
+                
+                <div class="mb-4">
+                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
+                        <p class="text-green-400 font-semibold">✅ Status: API responde (no CORS)</p>
+                        <p class="text-gray-300">resultCount: 23 - ¡HAY DATOS DISPONIBLES!</p>
+                        <p class="text-yellow-400">⚠️ Problem: API key requerida</p>
+                    </div>
+                </div>
+                
+                <button id="testBtn" class="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                    🔍 Probar métodos alternativos
+                </button>
+            </div>
+        </div>
+
+        <div id="results" class="max-w-4xl mx-auto">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Resultados de prueba</h3>
+                <div id="content" class="text-sm text-gray-300">
+                    <p>Click para probar diferentes enfoques...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, data = null) {
+            const content = document.getElementById('content');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-2 p-2 bg-slate-700 rounded border-l-4 border-orange-500';
+            logEntry.innerHTML = `
+                <div class="text-xs text-gray-500">[${timestamp}]</div>
+                <div class="text-white">${message}</div>
+                ${data ? `<div class="text-xs text-gray-400 mt-1 font-mono max-h-32 overflow-y-auto">${JSON.stringify(data, null, 2)}</div>` : ''}
+            `;
+            content.appendChild(logEntry);
+            content.scrollTop = content.scrollHeight;
+        }
+
+        async function testAlternativeMethods() {
+            const walletAddress = "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2";
+            const contractAddress = "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a";
+
+            log('🚀 Probando métodos alternativos...');
+            log('📊 Sabemos que hay 23 transacciones disponibles');
+
+            // Método 1: Sin API key
+            try {
+                log('📡 Método 1: V2 sin API key...');
+                const url1 = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${contractAddress}&address=${walletAddress}&page=1&offset=10&sort=desc`;
+                
+                const response1 = await fetch(url1);
+                const data1 = await response1.json();
+                
+                log('📥 Respuesta sin API key', data1);
+
+                if (data1.status === '1' && data1.result) {
+                    log('✅ ¡Funciona sin API key!', `${data1.result.length} transacciones`);
+                    createRealTransactions(data1.result, walletAddress);
+                    return;
+                } else if (data1.result && data1.result.length > 0) {
+                    log('⚠️ Datos parciales sin API key', data1.result);
+                    createRealTransactions(data1.result, walletAddress);
+                    return;
+                }
+            } catch (error) {
+                log('❌ Error método 1', error.message);
+            }
+
+            // Método 2: BSC API original
+            try {
+                log('📡 Método 2: BSCScan API original...');
+                const url2 = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${contractAddress}&address=${walletAddress}&page=1&offset=10&sort=desc`;
+                
+                const response2 = await fetch(url2);
+                const data2 = await response2.json();
+                
+                log('📥 BSCScan API respuesta', data2);
+
+                if (data2.status === '1' && data2.result) {
+                    log('✅ BSCScan API funciona!', `${data2.result.length} transacciones`);
+                    createRealTransactions(data2.result, walletAddress);
+                    return;
+                }
+            } catch (error) {
+                log('❌ Error método 2', error.message);
+            }
+
+            // Método 3: API Key gratuita demo
+            try {
+                log('📡 Método 3: Con API key gratuita...');
+                log('💡 Para obtener API key gratuita:', 'https://etherscan.io/register');
+                
+                // Por ahora, crear ejemplo con los datos que sabemos existen
+                log('📋 Creando ejemplo basado en los 23 registros confirmados...');
+                createExampleTransaction(walletAddress);
+                
+            } catch (error) {
+                log('❌ Error método 3', error.message);
+            }
+        }
+
+        function createRealTransactions(transactions, walletAddress) {
+            // Filtrar solo transacciones XTOO hacia la wallet
+            const xtooIncoming = transactions.filter(tx => 
+                tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase() &&
+                tx.contractAddress && tx.contractAddress.toLowerCase() === '0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a'
+            );
+
+            if (xtooIncoming.length === 0) {
+                log('⚠️ No se encontraron transacciones XTOO IN en los datos recibidos');
+                return;
+            }
+
+            log('✅ Transacciones XTOO IN encontradas', xtooIncoming.length);
+
+            const formatTransactions = xtooIncoming.map(tx => {
+                const amount = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18));
+                let formattedAmount;
+                if (amount % 1 === 0) {
+                    formattedAmount = amount.toString();
+                } else if (amount >= 1) {
+                    formattedAmount = amount.toFixed(1);
+                } else {
+                    formattedAmount = amount.toFixed(8).replace(/\.?0+$/, '');
+                }
+
+                const timeAgo = getTimeAgo(tx.timeStamp);
+                
+                return `Transfer ${timeAgo} IN ${walletAddress} ${formattedAmount} Xtoom (XTOO)`;
+            }).join('<br>');
+
+            log('🎯 FORMATO FINAL CORRECTO:', formatTransactions);
+
+            document.getElementById('content').innerHTML += `
+                <div class="mt-6 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                    <h4 class="font-bold text-emerald-400 mb-2">✅ TRANSACCIONES REALES OBTENIDAS</h4>
+                    <div class="bg-slate-900 p-3 rounded font-mono text-sm text-emerald-300">
+                        ${formatTransactions}
+                    </div>
+                </div>
+            `;
+        }
+
+        function createExampleTransaction(walletAddress) {
+            log('📝 Creando transacción de ejemplo con formato exacto...');
+            
+            const exampleFormat = `Transfer 12 days ago IN ${walletAddress} 29.1 Xtoom (XTOO)`;
+            
+            document.getElementById('content').innerHTML += `
+                <div class="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <h4 class="font-bold text-yellow-400 mb-2">📋 FORMATO EJEMPLO (Basado en datos confirmados)</h4>
+                    <div class="bg-slate-900 p-3 rounded font-mono text-sm text-yellow-300 mb-3">
+                        ${exampleFormat}
+                    </div>
+                    <p class="text-xs text-gray-400">Sabemos que existen 23 transacciones. Para obtenerlas necesitas:</p>
+                    <div class="mt-2 text-xs">
+                        <p>🔑 <a href="https://etherscan.io/register" target="_blank" class="text-blue-400 hover:underline">API Key gratuita de Etherscan ↗</a></p>
+                        <p>📝 O entrada manual desde <a href="https://bscscan.com/address/${walletAddress}#tokentxns" target="_blank" class="text-purple-400 hover:underline">BSCScan ↗</a></p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTimeAgo(timestamp) {
+            const now = Date.now();
+            const txDate = parseInt(timestamp) * 1000;
+            const diffMs = now - txDate;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                return diffHours === 0 ? 'few minutes ago' : `${diffHours} hours ago`;
+            } else if (diffDays === 1) {
+                return '1 day ago';
+            } else {
+                return `${diffDays} days ago`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testBtn').addEventListener('click', testAlternativeMethods);
+        });
+    </script>
+</body>
+</html>

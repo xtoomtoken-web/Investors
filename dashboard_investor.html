@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investor Tracking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-white">Investor Tracking</h1>
+            <div class="flex space-x-4">
+                <button id="connectButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                    <span>Connect Wallet</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingPanel" class="hidden bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-400"></div>
+                <span id="loadingText">Cargando datos de blockchain...</span>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="hidden bg-green-600/20 border border-green-500/30 rounded-xl p-4 mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>Connected:</span>
+                    <span id="walletAddress" class="font-mono text-sm"></span>
+                    <span class="ml-4">Network:</span>
+                    <span id="networkName" class="font-semibold">BSC</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="editUserInfo" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm">
+                        ✏️ Edit Info
+                    </button>
+                    <button onclick="loadAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">
+                        🔄 Refresh All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investor Info Panel -->
+        <div id="investorInfoPanel" class="hidden bg-gradient-to-r from-purple-600/20 to-purple-800/20 rounded-2xl p-6 backdrop-blur-sm border border-purple-500/30 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4">👤 Investor</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Name</p>
+                    <p id="investorName" class="text-white font-semibold">-</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Initial Investment</p>
+                    <p id="initialInvestment" class="text-white font-semibold">$0</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Initial Date</p>
+                    <p id="initialDate" class="text-white font-semibold">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROI and APY Cards -->
+        <div id="roiApyCards" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- ROI Card -->
+            <div class="bg-gradient-to-r from-emerald-600/20 to-emerald-800/20 rounded-2xl p-8 backdrop-blur-sm border border-emerald-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">📈 ROI (Return on Investment)</h3>
+                    <div id="roiTrend" class="text-2xl">📊</div>
+                </div>
+                <div id="roiValue" class="text-4xl font-bold text-emerald-400 mb-2">0.00%</div>
+                <div class="text-sm text-gray-400">
+                    <span>Ganancia/Pérdida: </span>
+                    <span id="roiDifference" class="font-semibold">$0</span>
+                </div>
+            </div>
+
+            <!-- APY Card -->
+            <div class="bg-gradient-to-r from-amber-600/20 to-amber-800/20 rounded-2xl p-8 backdrop-blur-sm border border-amber-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">📅 APY (Annual Percentage Yield)</h3>
+                    <div id="apyTrend" class="text-2xl">⏱️</div>
+                </div>
+                <div id="apyValue" class="text-4xl font-bold text-amber-400 mb-2">0.00%</div>
+                <div class="text-sm text-gray-400">
+                    <div class="mb-1">
+                        <span>Días transcurridos: </span>
+                        <span id="daysPassed" class="font-semibold">0</span>
+                    </div>
+                    <div class="text-xs opacity-75">
+                        <span id="apyMethod">Cálculo: Compounding anual</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Balance Card -->
+        <div id="balanceCard" class="hidden bg-gradient-to-r from-blue-600/20 to-blue-800/20 rounded-2xl p-8 backdrop-blur-sm border border-blue-500/30 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4">Total Portfolio Balance</h2>
+            <div class="text-5xl font-bold text-blue-400" id="totalBalance">$0.00</div>
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Network</p>
+                    <p class="text-white font-semibold">Binance Smart Chain</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Tokens Found</p>
+                    <p class="text-white font-semibold" id="tokenCount">0</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Last Update</p>
+                    <p class="text-white font-semibold" id="lastUpdate">--:--:--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investor Level Progress Bar -->
+        <div id="investorLevelPanel" class="hidden bg-gradient-to-r from-indigo-600/20 to-indigo-800/20 rounded-2xl p-6 backdrop-blur-sm border border-indigo-500/30 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-white">🏆 Investor Level</h3>
+                    <p id="currentLevel" class="text-indigo-400 font-semibold">Fan Investor</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-bold text-white" id="xtoomBalance">0 XTOO</p>
+                    <p class="text-gray-400 text-sm" id="nextLevelInfo">Next: Pro Investor</p>
+                </div>
+            </div>
+            
+            <!-- Progress Bar Container -->
+            <div class="relative">
+                <div class="w-full bg-gray-700 rounded h-8 mb-4">
+                    <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-purple-600 h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden">
+                        <!-- Animated shine effect -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                    </div>
+                </div>
+                
+                <!-- Level Markers -->
+                <div class="flex justify-between text-xs text-gray-400 relative">
+                    <div class="text-center">
+                        <div class="w-2 h-2 bg-blue-400 rounded-full mx-auto mb-1"></div>
+                        <span>0</span>
+                        <br>
+                        <span class="text-blue-400">Fan</span>
+                    </div>
+                    <div class="text-center absolute left-1/2 transform -translate-x-1/2">
+                        <div class="w-2 h-2 bg-yellow-400 rounded-full mx-auto mb-1"></div>
+                        <span>2,500</span>
+                        <br>
+                        <span class="text-yellow-400">Pro</span>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-2 h-2 bg-purple-400 rounded-full mx-auto mb-1"></div>
+                        <span>5,000</span>
+                        <br>
+                        <span class="text-purple-400">VIP</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tokens Grid - 4 columns for main tokens -->
+        <div id="tokensGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- Token cards will be inserted here -->
+        </div>
+
+        <!-- Instructions -->
+        <div id="instructions" class="text-center py-20">
+            <div class="bg-slate-800/50 rounded-2xl p-12 backdrop-blur-sm border border-white/10">
+                <h2 class="text-3xl font-semibold text-white mb-4">Conecta tu Billetera para Tracking de ROI/APY</h2>
+                <p class="text-gray-300 text-lg mb-8">Conecta tu billetera MetaMask para rastrear tu inversión en Xtoom con métricas de ROI y APY</p>
+                <div class="w-32 h-32 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <svg class="w-16 h-16 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <p class="mb-2">📊 Funciones del Investor Dashboard:</p>
+                    <p class="mb-2">• Tracking de ROI basado en tu inversión inicial en Xtoom</p>
+                    <p class="mb-2">• Cálculo de APY anualizado según días transcurridos</p>
+                    <p class="mb-2">• Información personalizada de inversor</p>
+                    <p class="mb-2">• Vista completa: BNB, Xtoom, Cardano, WLF y otros tokens</p>
+                    <p class="mb-2">• Tokens específicos con badges distintivos y precios reales</p>
+                    <p>🌐 Red: Binance Smart Chain (BSC)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- First Time User Modal -->
+    <div id="firstTimeModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-slate-600">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">🎉 Welcome New Investor!</h2>
+            <p class="text-gray-300 mb-6 text-center">To track your ROI/APY we need some initial information:</p>
+            
+            <form id="firstTimeForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Investor Name</label>
+                    <input type="text" id="userNameInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" placeholder="Ex: John Smith" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment (USD)</label>
+                    <input type="number" id="initialInvestmentInput" step="0.01" min="0" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" placeholder="Ex: 1000" required>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment Date</label>
+                    <input type="date" id="initialDateInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        💾 Save and Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Info Modal -->
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-slate-600">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">✏️ Edit Information</h2>
+            
+            <form id="editUserForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Investor Name</label>
+                    <input type="text" id="editUserNameInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment (USD)</label>
+                    <input type="number" id="editInitialInvestmentInput" step="0.01" min="0" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Initial Investment Date</label>
+                    <input type="date" id="editInitialDateInput" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500" required>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <button type="button" id="cancelEditBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        ❌ Cancel
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        💾 Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de tokens específicos - MOSTRAR TODOS (Xtoom, Cardano, WLF)
+        const SPECIFIC_TOKENS = [
+            {
+                address: '0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a',
+                name: 'Xtoom',
+                symbol: 'XTOO',
+                isTarget: true, // Token principal usado para ROI
+                geckoApi: 'https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x934a02c24699598daef464cd0fbc81c57f262fa0'
+            },
+            {
+                address: '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47',
+                name: 'Cardano',
+                symbol: 'ADA',
+                isKnown: true
+            },
+            {
+                address: '0x47474747477b199288bF72a1D702f7Fe0Fb1DEeA',
+                name: 'World Liberty Financial',
+                symbol: 'WLF',
+                isKnown: true
+            }
+        ];
+
+        // Mapeo de nombres personalizados para tokens específicos
+        const TOKEN_NAME_OVERRIDES = {
+            // Para WLF cuando aparezca como Unknown
+            'Unknown Token': { name: 'World Liberty Financial', symbol: 'WLF' },
+            'Unknown': { name: 'World Liberty Financial', symbol: 'WLF' }
+        };
+
+        const BSC_CHAIN_ID = '0x38';
+        const BSC_RPC = 'https://bsc-dataseed.binance.org/';
+        const BSCSCAN_API = 'https://api.bscscan.com/api';
+        const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+        
+        // Database key for localStorage
+        const DB_KEY = 'web3_wallet_investors';
+
+        let userAddress = null;
+        let isConnected = false;
+        let currentUserData = null;
+        let xtoomCurrentValue = 0;
+        let xtoomBalance = 0; // Balance in XTOO tokens (not USD value)
+
+        // Investor Level System
+        const INVESTOR_LEVELS = {
+            FAN: { min: 0, max: 2499, name: 'Fan Investor', color: 'blue', emoji: '🌟' },
+            PRO: { min: 2500, max: 4999, name: 'Pro Investor', color: 'yellow', emoji: '⚡' },
+            VIP: { min: 5000, max: Infinity, name: 'VIP Investor', color: 'purple', emoji: '👑' }
+        };
+
+        function getInvestorLevel(xtoomAmount) {
+            if (xtoomAmount >= INVESTOR_LEVELS.VIP.min) return INVESTOR_LEVELS.VIP;
+            if (xtoomAmount >= INVESTOR_LEVELS.PRO.min) return INVESTOR_LEVELS.PRO;
+            return INVESTOR_LEVELS.FAN;
+        }
+
+        function calculateProgress(xtoomAmount) {
+            if (xtoomAmount >= 5000) {
+                return 100; // VIP level achieved
+            } else if (xtoomAmount >= 2500) {
+                // Between Pro and VIP (2500-5000)
+                return 50 + ((xtoomAmount - 2500) / 2500) * 50;
+            } else {
+                // Between Fan and Pro (0-2500)
+                return (xtoomAmount / 2500) * 50;
+            }
+        }
+
+        function updateInvestorLevelDisplay(xtoomTokens) {
+            const level = getInvestorLevel(xtoomTokens);
+            const progress = calculateProgress(xtoomTokens);
+            
+            // Update level info
+            document.getElementById('currentLevel').textContent = `${level.emoji} ${level.name}`;
+            document.getElementById('xtoomBalance').textContent = `${xtoomTokens.toLocaleString()} XTOO`;
+            
+            // Update next level info
+            let nextLevelInfo = '';
+            if (level === INVESTOR_LEVELS.FAN) {
+                const needed = 2500 - xtoomTokens;
+                nextLevelInfo = `Next: ${INVESTOR_LEVELS.PRO.emoji} ${INVESTOR_LEVELS.PRO.name} (${needed.toLocaleString()} XTOO more)`;
+            } else if (level === INVESTOR_LEVELS.PRO) {
+                const needed = 5000 - xtoomTokens;
+                nextLevelInfo = `Next: ${INVESTOR_LEVELS.VIP.emoji} ${INVESTOR_LEVELS.VIP.name} (${needed.toLocaleString()} XTOO more)`;
+            } else {
+                nextLevelInfo = `🎉 Maximum level achieved!`;
+            }
+            document.getElementById('nextLevelInfo').textContent = nextLevelInfo;
+            
+            // Update progress bar with animation
+            const progressBar = document.getElementById('progressBar');
+            
+            // Set gradient based on level
+            let gradient = 'from-blue-500 to-blue-600';
+            if (level === INVESTOR_LEVELS.PRO) {
+                gradient = 'from-yellow-500 to-orange-600';
+            } else if (level === INVESTOR_LEVELS.VIP) {
+                gradient = 'from-purple-500 to-pink-600';
+            }
+            
+            progressBar.className = `bg-gradient-to-r ${gradient} h-8 rounded transition-all duration-1000 ease-out relative overflow-hidden`;
+            
+            // Animate progress bar
+            setTimeout(() => {
+                progressBar.style.width = `${progress}%`;
+            }, 100);
+        }
+
+        // Database functions
+        function getInvestorsDatabase() {
+            try {
+                return JSON.parse(localStorage.getItem(DB_KEY)) || {};
+            } catch {
+                return {};
+            }
+        }
+
+        function saveInvestorData(walletAddress, userData) {
+            const db = getInvestorsDatabase();
+            db[walletAddress.toLowerCase()] = {
+                ...userData,
+                lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+        }
+
+        function getInvestorData(walletAddress) {
+            const db = getInvestorsDatabase();
+            return db[walletAddress.toLowerCase()] || null;
+        }
+
+        function isFirstTimeUser(walletAddress) {
+            return getInvestorData(walletAddress) === null;
+        }
+
+        // ROI and APY calculations
+        function calculateROI(currentValue, initialInvestment) {
+            if (initialInvestment <= 0) return 0;
+            return ((currentValue - initialInvestment) / initialInvestment) * 100;
+        }
+
+        function calculateAPY(roi, daysPassed) {
+            if (daysPassed <= 0) return 0;
+            
+            // Método 1: APY Simple (Proyección Lineal)
+            const apySimple = (roi / daysPassed) * 365;
+            
+            // Método 2: APY Compuesto (Más preciso matemáticamente)
+            // APY = ((1 + ROI/100)^(365/days)) - 1) * 100
+            const roiDecimal = roi / 100; // Convertir % a decimal
+            const apyCompound = (Math.pow(1 + roiDecimal, 365 / daysPassed) - 1) * 100;
+            
+            // Usar APY compuesto para cálculos más precisos
+            // Pero limitar valores extremos para days < 30
+            if (daysPassed < 30) {
+                // Para períodos cortos, usar promedio entre ambos métodos
+                return (apySimple + apyCompound) / 2;
+            } else {
+                // Para períodos largos, usar compounding
+                return apyCompound;
+            }
+        }
+
+        function getDaysPassed(initialDate) {
+            const start = new Date(initialDate);
+            const now = new Date();
+            const diffTime = Math.abs(now - start);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        // UI Updates for ROI/APY
+        function updateROIAPYDisplay(currentXtoomValue, userData) {
+            const { initialInvestment, initialDate } = userData;
+            
+            const roi = calculateROI(currentXtoomValue, initialInvestment);
+            const daysPassed = getDaysPassed(initialDate);
+            const apy = calculateAPY(roi, daysPassed);
+            const difference = currentXtoomValue - initialInvestment;
+
+            // Update ROI card
+            const roiValue = document.getElementById('roiValue');
+            const roiDifference = document.getElementById('roiDifference');
+            const roiTrend = document.getElementById('roiTrend');
+            
+            roiValue.textContent = roi.toFixed(2) + '%';
+            roiDifference.textContent = (difference >= 0 ? '+$' : '-$') + Math.abs(difference).toFixed(2);
+            
+            if (roi > 0) {
+                roiValue.className = 'text-4xl font-bold text-emerald-400 mb-2';
+                roiDifference.className = 'font-semibold text-emerald-400';
+                roiTrend.textContent = '📈';
+            } else {
+                roiValue.className = 'text-4xl font-bold text-red-400 mb-2';
+                roiDifference.className = 'font-semibold text-red-400';
+                roiTrend.textContent = '📉';
+            }
+
+            // Update APY card
+            const apyValue = document.getElementById('apyValue');
+            const daysPassedEl = document.getElementById('daysPassed');
+            const apyTrend = document.getElementById('apyTrend');
+            const apyMethod = document.getElementById('apyMethod');
+            
+            apyValue.textContent = apy.toFixed(2) + '%';
+            daysPassedEl.textContent = daysPassed;
+            
+            // Show calculation method
+            if (daysPassed < 30) {
+                apyMethod.textContent = 'Calculation: Average (short period)';
+            } else {
+                apyMethod.textContent = 'Calculation: Annual compounding';
+            }
+            
+            if (apy > 0) {
+                apyValue.className = 'text-4xl font-bold text-amber-400 mb-2';
+                apyTrend.textContent = '🚀';
+            } else {
+                apyValue.className = 'text-4xl font-bold text-orange-400 mb-2';
+                apyTrend.textContent = '⏳';
+            }
+        }
+
+        function updateInvestorInfoDisplay(userData) {
+            document.getElementById('investorName').textContent = userData.name;
+            document.getElementById('initialInvestment').textContent = '$' + userData.initialInvestment.toLocaleString();
+            document.getElementById('initialDate').textContent = new Date(userData.initialDate).toLocaleDateString('es-ES');
+        }
+
+        // Modal functions
+        function showFirstTimeModal() {
+            document.getElementById('firstTimeModal').classList.remove('hidden');
+            // Set default date to today
+            document.getElementById('initialDateInput').valueAsDate = new Date();
+        }
+
+        function hideFirstTimeModal() {
+            document.getElementById('firstTimeModal').classList.add('hidden');
+        }
+
+        function showEditModal(userData) {
+            document.getElementById('editUserNameInput').value = userData.name;
+            document.getElementById('editInitialInvestmentInput').value = userData.initialInvestment;
+            document.getElementById('editInitialDateInput').valueAsDate = new Date(userData.initialDate);
+            document.getElementById('editUserModal').classList.remove('hidden');
+        }
+
+        function hideEditModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+        }
+
+        // Utilidades
+        function hexToDecimal(hex) {
+            return parseInt(hex, 16);
+        }
+
+        function formatUnits(value, decimals) {
+            const divisor = Math.pow(10, decimals);
+            const num = parseInt(value, 16);
+            return (num / divisor).toString();
+        }
+
+        function formatEther(weiValue) {
+            return formatUnits(weiValue, 18);
+        }
+
+        // Mostrar/ocultar loading
+        function showLoading(text = 'Cargando datos...') {
+            document.getElementById('loadingPanel').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = text;
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingPanel').classList.add('hidden');
+        }
+
+        // Actualizar UI de conexión
+        function updateConnectionStatus(connected) {
+            const connectButton = document.getElementById('connectButton');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const instructions = document.getElementById('instructions');
+            const balanceCard = document.getElementById('balanceCard');
+            const tokensGrid = document.getElementById('tokensGrid');
+            const walletAddress = document.getElementById('walletAddress');
+            const investorInfoPanel = document.getElementById('investorInfoPanel');
+            const roiApyCards = document.getElementById('roiApyCards');
+            const investorLevelPanel = document.getElementById('investorLevelPanel');
+            
+            if (connected) {
+                connectButton.innerHTML = `
+                    <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <span>Connected</span>
+                `;
+                connectButton.className = connectButton.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-green-600 hover:bg-green-700');
+                
+                connectionStatus.classList.remove('hidden');
+                instructions.classList.add('hidden');
+                balanceCard.classList.remove('hidden');
+                tokensGrid.classList.remove('hidden');
+                investorInfoPanel.classList.remove('hidden');
+                roiApyCards.classList.remove('hidden');
+                investorLevelPanel.classList.remove('hidden');
+                
+                walletAddress.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+            } else {
+                connectButton.innerHTML = `
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                    <span>Conectar Billetera</span>
+                `;
+                connectButton.className = connectButton.className.replace('bg-green-600 hover:bg-green-700', 'bg-blue-600 hover:bg-blue-700');
+                
+                connectionStatus.classList.add('hidden');
+                instructions.classList.remove('hidden');
+                balanceCard.classList.add('hidden');
+                tokensGrid.classList.add('hidden');
+                investorInfoPanel.classList.add('hidden');
+                roiApyCards.classList.add('hidden');
+                investorLevelPanel.classList.add('hidden');
+            }
+        }
+
+        // Llamar contrato 
+        async function callContract(contractAddress, data) {
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{ to: contractAddress, data: data }, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const result = await response.json();
+                return result.result;
+            } catch (error) {
+                console.error('Error en llamada al contrato:', error);
+                return null;
+            }
+        }
+
+        // Aplicar nombres personalizados - SIMPLIFICADO
+        function applyNameOverrides(tokenInfo) {
+            const { name, symbol } = tokenInfo;
+            
+            console.log('Aplicando override para:', { name, symbol, address: tokenInfo.address });
+            
+            // Solo aplicar overrides para tokens Unknown -> WLF
+            if (name === 'Unknown Token' || name === 'Unknown' || symbol === 'UNK') {
+                console.log('Override aplicado: Unknown -> WLF');
+                return { ...tokenInfo, name: 'World Liberty Financial', symbol: 'WLF' };
+            }
+            
+            console.log('Sin override aplicado');
+            return tokenInfo;
+        }
+
+        // Obtener información básica del token
+        async function getBasicTokenInfo(tokenAddress) {
+            try {
+                const nameSignature = '0x06fdde03'; // name()
+                const symbolSignature = '0x95d89b41'; // symbol()
+                const decimalsSignature = '0x313ce567'; // decimals()
+                
+                const [nameResult, symbolResult, decimalsResult] = await Promise.all([
+                    callContract(tokenAddress, nameSignature),
+                    callContract(tokenAddress, symbolSignature),
+                    callContract(tokenAddress, decimalsSignature)
+                ]);
+                
+                let name = 'Unknown Token';
+                let symbol = 'UNK';
+                let decimals = 18;
+                
+                if (decimalsResult) {
+                    decimals = hexToDecimal(decimalsResult);
+                }
+                
+                let tokenInfo = { name, symbol, decimals, address: tokenAddress };
+                return applyNameOverrides(tokenInfo);
+                
+            } catch (error) {
+                console.error('Error obteniendo info básica del token:', error);
+                let tokenInfo = { name: 'Unknown Token', symbol: 'UNK', decimals: 18, address: tokenAddress };
+                return applyNameOverrides(tokenInfo);
+            }
+        }
+
+        // Obtener balance de token
+        async function getTokenBalance(tokenAddress, decimals) {
+            try {
+                const balanceSignature = '0x70a08231';
+                const paddedAddress = userAddress.slice(2).padStart(64, '0');
+                const balanceData = balanceSignature + paddedAddress;
+                
+                const result = await callContract(tokenAddress, balanceData);
+                
+                if (result && result !== '0x') {
+                    return formatUnits(result, decimals);
+                }
+                return '0';
+            } catch (error) {
+                console.error(`Error obteniendo balance del token ${tokenAddress}:`, error);
+                return '0';
+            }
+        }
+
+        // Obtener precios
+        async function getBNBPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=binancecoin&vs_currencies=usd`);
+                const data = await response.json();
+                return data.binancecoin?.usd || 600;
+            } catch (error) {
+                console.error('Error obteniendo precio BNB:', error);
+                return 600;
+            }
+        }
+
+        async function getXtoomPrice() {
+            try {
+                const response = await fetch(SPECIFIC_TOKENS[0].geckoApi);
+                const data = await response.json();
+                if (data && data.data && data.data.attributes) {
+                    return parseFloat(data.data.attributes.base_token_price_usd) || 0.001;
+                }
+            } catch (error) {
+                console.error('Error obteniendo precio desde GeckoTerminal:', error);
+            }
+            return 0.001; // Fallback price
+        }
+
+        async function getTokenPriceBySymbol(symbol, tokenAddress) {
+            switch (symbol?.toUpperCase()) {
+                case 'WLF':
+                    return await getWLFPrice();
+                case 'ADA':
+                    return await getADAPrice();
+                case 'XTOO':
+                case 'XTOOM':
+                    return await getXtoomPrice();
+                default:
+                    if (tokenAddress?.toLowerCase() === SPECIFIC_TOKENS[0].address.toLowerCase()) {
+                        return await getXtoomPrice();
+                    }
+                    return 0.001;
+            }
+        }
+
+        async function getWLFPrice() {
+            try {
+                const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=WLFIUSDT');
+                const data = await response.json();
+                if (data.price) {
+                    return parseFloat(data.price);
+                }
+            } catch (error) {
+                console.log('WLF no disponible en Binance, probando CoinGecko...');
+            }
+            
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=world-liberty-financial-wlfi&vs_currencies=usd`);
+                const data = await response.json();
+                return data['world-liberty-financial-wlfi']?.usd || 0.02;
+            } catch (error) {
+                return 0.02;
+            }
+        }
+
+        async function getADAPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=cardano&vs_currencies=usd`);
+                const data = await response.json();
+                return data.cardano?.usd || 0.5;
+            } catch (error) {
+                return 0.5;
+            }
+        }
+
+        // Get BNB balance
+        async function getBNBBalance() {
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_getBalance',
+                        params: [userAddress, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const result = await response.json();
+                return formatEther(result.result);
+            } catch (error) {
+                console.error('Error obteniendo balance BNB:', error);
+                return '0';
+            }
+        }
+
+        // Create token card
+        function createTokenCard(token) {
+            const balanceNum = parseFloat(token.balance);
+            const priceNum = parseFloat(token.price);
+            const valueUSD = balanceNum * priceNum;
+            
+            let cardStyle = 'bg-gradient-to-r from-blue-600/20 to-blue-800/20 border-blue-500/30';
+            let badge = '';
+            
+            if (token.symbol === 'BNB') {
+                cardStyle = 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-yellow-500/30';
+                badge = '🟨 Moneda Nativa';
+            } else if (token.symbol === 'XTOO' || token.isTarget) {
+                cardStyle = 'bg-gradient-to-r from-green-600/20 to-green-800/20 border-green-500/30';
+                badge = '⭐ Token Principal (ROI Tracking)';
+            } else if (token.symbol === 'ADA') {
+                cardStyle = 'bg-gradient-to-r from-orange-600/20 to-orange-800/20 border-orange-500/30';
+                badge = '🔸 Cardano Token';
+            } else if (token.symbol === 'WLF') {
+                cardStyle = 'bg-gradient-to-r from-purple-600/20 to-purple-800/20 border-purple-500/30';
+                badge = '📍 World Liberty Financial';
+            }
+
+            return `
+                <div class="rounded-xl p-4 backdrop-blur-sm border ${cardStyle}">
+                    <div class="mb-3">
+                        <h3 class="text-lg font-bold text-white truncate">${token.name}</h3>
+                        <p class="text-gray-400 text-sm">${token.symbol}</p>
+                        ${badge ? `<span class="inline-block mt-1 text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">${badge}</span>` : ''}
+                    </div>
+                    <div class="mb-3">
+                        <p class="text-xl font-bold text-white">$${valueUSD.toFixed(2)}</p>
+                        <p class="text-gray-400 text-xs">@$${priceNum.toFixed(6)}</p>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-2">
+                        <p class="text-gray-400 text-xs">Balance</p>
+                        <p class="text-white font-mono text-sm">${parseFloat(token.balance).toFixed(2)} ${token.symbol}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load all data
+        async function loadAllData() {
+            if (!userAddress) return;
+
+            try {
+                showLoading('Cargando balance BNB...');
+                
+                // Get BNB balance and price
+                const [bnbBalance, bnbPrice] = await Promise.all([
+                    getBNBBalance(),
+                    getBNBPrice()
+                ]);
+
+                const bnbBalanceNum = parseFloat(bnbBalance);
+                let totalValue = bnbBalanceNum * bnbPrice;
+                let tokens = [];
+                const processedAddresses = new Set();
+
+                // Add BNB as first token
+                if (bnbBalanceNum > 0) {
+                    tokens.push({
+                        name: 'Binance Coin',
+                        symbol: 'BNB',
+                        balance: bnbBalance,
+                        price: bnbPrice,
+                        address: 'BNB'
+                    });
+                }
+
+                showLoading('Procesando tokens específicos: Xtoom, Cardano, WLF...');
+                
+                // Process ALL specific tokens (Xtoom, Cardano)
+                for (const specificToken of SPECIFIC_TOKENS) {
+                    try {
+                        const tokenInfo = {
+                            address: specificToken.address,
+                            name: specificToken.name,
+                            symbol: specificToken.symbol,
+                            decimals: 18 // Default, will be overridden if needed
+                        };
+
+                        // Get actual token info and balance
+                        const actualTokenInfo = await getBasicTokenInfo(specificToken.address);
+                        const balance = await getTokenBalance(specificToken.address, actualTokenInfo.decimals || 18);
+                        const balanceNum = parseFloat(balance);
+                        
+                        if (balanceNum > 0) {
+                            const price = await getTokenPriceBySymbol(tokenInfo.symbol, specificToken.address);
+                            const tokenValue = balanceNum * price;
+                            totalValue += tokenValue;
+                            
+                            // Track Xtoom value and balance for ROI calculation and level system
+                            if (specificToken.isTarget) {
+                                xtoomCurrentValue = tokenValue;
+                                xtoomBalance = balanceNum; // Store token balance for level calculation
+                                console.log(`Xtoom tracking - Balance: ${balanceNum} tokens, Valor: $${xtoomCurrentValue}`);
+                            }
+                            
+                            tokens.push({
+                                ...tokenInfo,
+                                balance: balance,
+                                price: price,
+                                isTarget: specificToken.isTarget || false,
+                                decimals: actualTokenInfo.decimals || 18
+                            });
+                            
+                            processedAddresses.add(specificToken.address.toLowerCase());
+                        }
+                    } catch (error) {
+                        console.error('Error procesando token específico:', specificToken.name, error);
+                    }
+                }
+
+                showLoading('Buscando otros tokens adicionales...');
+                
+                // Get additional tokens from BSC scan (this will include WLF and other tokens)
+                await getAdditionalTokensComplete(tokens, totalValue, processedAddresses);
+
+                // Update total balance
+                document.getElementById('totalBalance').textContent = '$' + totalValue.toFixed(2);
+                document.getElementById('tokenCount').textContent = tokens.length;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+                // Render token cards
+                const tokensGrid = document.getElementById('tokensGrid');
+                tokensGrid.innerHTML = tokens.map(createTokenCard).join('');
+
+                // Update ROI/APY if we have user data and Xtoom value
+                if (currentUserData && xtoomCurrentValue > 0) {
+                    updateROIAPYDisplay(xtoomCurrentValue, currentUserData);
+                }
+
+                // Update investor level display
+                if (xtoomBalance > 0) {
+                    updateInvestorLevelDisplay(xtoomBalance);
+                }
+
+                hideLoading();
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                hideLoading();
+            }
+        }
+
+        // Complete function to get additional tokens (avoiding duplicates)
+        async function getAdditionalTokensComplete(tokens, totalValue, processedAddresses) {
+            try {
+                const url = `${BSCSCAN_API}?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=999999999&page=1&offset=50&sort=asc`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === '1' && data.result) {
+                    const uniqueTokens = new Map();
+                    
+                    // Collect unique tokens (excluding already processed ones)
+                    data.result.forEach(tx => {
+                        if (tx.contractAddress && tx.contractAddress !== '') {
+                            const address = tx.contractAddress.toLowerCase();
+                            
+                            // Skip if already processed
+                            if (!processedAddresses.has(address)) {
+                                let tokenInfo = {
+                                    address: tx.contractAddress,
+                                    name: tx.tokenName || 'Unknown Token',
+                                    symbol: tx.tokenSymbol || 'UNK',
+                                    decimals: parseInt(tx.tokenDecimal) || 18
+                                };
+                                
+                                // Apply name overrides (for WLF)
+                                tokenInfo = applyNameOverrides(tokenInfo);
+                                
+                                uniqueTokens.set(address, tokenInfo);
+                            }
+                        }
+                    });
+                    
+                    // Process each unique token
+                    for (const [address, tokenInfo] of uniqueTokens) {
+                        try {
+                            const balance = await getTokenBalance(tokenInfo.address, tokenInfo.decimals);
+                            const balanceNum = parseFloat(balance);
+                            
+                            if (balanceNum > 0) {
+                                const price = await getTokenPriceBySymbol(tokenInfo.symbol, tokenInfo.address);
+                                const tokenValue = balanceNum * price;
+                                
+                                tokens.push({
+                                    ...tokenInfo,
+                                    balance: balance,
+                                    price: price
+                                });
+                            }
+                        } catch (error) {
+                            console.error(`Error procesando token adicional ${address}:`, error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error obteniendo tokens adicionales:', error);
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect wallet button
+            document.getElementById('connectButton').addEventListener('click', async function() {
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        
+                        if (accounts.length > 0) {
+                            userAddress = accounts[0];
+                            isConnected = true;
+                            
+                            // Check if first time user
+                            if (isFirstTimeUser(userAddress)) {
+                                showFirstTimeModal();
+                            } else {
+                                // Load existing user data
+                                currentUserData = getInvestorData(userAddress);
+                                updateInvestorInfoDisplay(currentUserData);
+                                updateConnectionStatus(true);
+                                await loadAllData();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error conectando billetera:', error);
+                        alert('Error conectando con MetaMask. Asegúrate de tener MetaMask instalado.');
+                    }
+                } else {
+                    alert('MetaMask no detectado. Instala MetaMask para continuar.');
+                }
+            });
+
+            // First time form submission
+            document.getElementById('firstTimeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('userNameInput').value;
+                const initialInvestment = parseFloat(document.getElementById('initialInvestmentInput').value);
+                const initialDate = document.getElementById('initialDateInput').value;
+                
+                if (name && initialInvestment && initialDate) {
+                    currentUserData = {
+                        name,
+                        initialInvestment,
+                        initialDate,
+                        walletAddress: userAddress
+                    };
+                    
+                    saveInvestorData(userAddress, currentUserData);
+                    updateInvestorInfoDisplay(currentUserData);
+                    hideFirstTimeModal();
+                    updateConnectionStatus(true);
+                    loadAllData();
+                }
+            });
+
+            // Edit user info button
+            document.getElementById('editUserInfo').addEventListener('click', function() {
+                if (currentUserData) {
+                    showEditModal(currentUserData);
+                }
+            });
+
+            // Edit form submission
+            document.getElementById('editUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('editUserNameInput').value;
+                const initialInvestment = parseFloat(document.getElementById('editInitialInvestmentInput').value);
+                const initialDate = document.getElementById('editInitialDateInput').value;
+                
+                if (name && initialInvestment && initialDate) {
+                    currentUserData = {
+                        ...currentUserData,
+                        name,
+                        initialInvestment,
+                        initialDate
+                    };
+                    
+                    saveInvestorData(userAddress, currentUserData);
+                    updateInvestorInfoDisplay(currentUserData);
+                    
+                    // Recalculate ROI/APY with new data
+                    if (xtoomCurrentValue > 0) {
+                        updateROIAPYDisplay(xtoomCurrentValue, currentUserData);
+                    }
+                    
+                    hideEditModal();
+                }
+            });
+
+            // Cancel edit button
+            document.getElementById('cancelEditBtn').addEventListener('click', function() {
+                hideEditModal();
+            });
+
+            // Handle MetaMask events
+            if (typeof window.ethereum !== 'undefined') {
+                window.ethereum.on('accountsChanged', function(accounts) {
+                    if (accounts.length === 0) {
+                        userAddress = null;
+                        isConnected = false;
+                        currentUserData = null;
+                        xtoomCurrentValue = 0;
+                        updateConnectionStatus(false);
+                    } else if (accounts[0] !== userAddress) {
+                        location.reload();
+                    }
+                });
+
+                window.ethereum.on('chainChanged', function(chainId) {
+                    if (chainId !== BSC_CHAIN_ID) {
+                        alert('Por favor cambia a Binance Smart Chain (BSC) en MetaMask');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

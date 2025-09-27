@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Etherscan API V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🌐 Test Etherscan API V2 (Unified)</h1>
+        
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">API V2 Configuration</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Wallet Address:</label>
+                    <input type="text" id="walletAddress" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                           value="0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Chain ID:</label>
+                    <select id="chainId" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm">
+                        <option value="56">56 - BSC (Binance Smart Chain)</option>
+                        <option value="1">1 - Ethereum Mainnet</option>
+                        <option value="137">137 - Polygon</option>
+                        <option value="42161">42161 - Arbitrum One</option>
+                        <option value="10">10 - Optimism</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">XTOO Contract Address:</label>
+                    <input type="text" id="contractAddress" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                           value="0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a">
+                </div>
+                
+                <button id="testV2Btn" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                    🚀 Test Etherscan V2 API
+                </button>
+            </div>
+        </div>
+
+        <div id="results" class="max-w-4xl mx-auto">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">API V2 Results</h3>
+                <div id="content" class="text-sm text-gray-300">
+                    <p>Click "Test Etherscan V2 API" to start...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, data = null) {
+            const content = document.getElementById('content');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-2 p-2 bg-slate-700 rounded border-l-4 border-green-500';
+            logEntry.innerHTML = `
+                <div class="text-xs text-gray-500">[${timestamp}]</div>
+                <div class="text-white">${message}</div>
+                ${data ? `<div class="text-xs text-gray-400 mt-1 font-mono max-h-32 overflow-y-auto">${JSON.stringify(data, null, 2)}</div>` : ''}
+            `;
+            content.appendChild(logEntry);
+            content.scrollTop = content.scrollHeight;
+        }
+
+        function displayTransactions(transactions, walletAddress) {
+            // Filter for ONLY incoming (IN) transactions to the wallet
+            const filteredTransactions = transactions.filter(tx => {
+                const isIncoming = tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase();
+                const isXTOOToken = tx.contractAddress && tx.contractAddress.toLowerCase() === '0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a';
+                return isIncoming && isXTOOToken;
+            });
+
+            log(`✅ Filtered for XTOO IN transactions`, {
+                total: transactions.length,
+                xtooIncoming: filteredTransactions.length
+            });
+
+            if (filteredTransactions.length === 0) {
+                document.getElementById('content').innerHTML += `
+                    <div class="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                        <h4 class="font-bold text-yellow-400 mb-2">⚠️ No XTOO IN Transactions</h4>
+                        <p class="text-gray-300 text-sm">No incoming XTOO transfers found for this wallet on this chain</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Helper function para tiempo
+            function getTimeAgo(timestamp) {
+                const now = Date.now();
+                const txDate = parseInt(timestamp) * 1000;
+                const diffMs = now - txDate;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) {
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    if (diffHours === 0) {
+                        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                        return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+                    }
+                    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+                } else if (diffDays === 1) {
+                    return '1 day ago';
+                } else {
+                    return `${diffDays} days ago`;
+                }
+            }
+
+            const transactionsList = filteredTransactions.slice(0, 10).map((tx) => {
+                // Convertir amount de wei a XTOO
+                const xtooAmount = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18));
+                
+                // Formatear amount exactamente como BSCScan
+                let formattedAmount;
+                if (xtooAmount % 1 === 0) {
+                    formattedAmount = xtooAmount.toString();
+                } else if (xtooAmount >= 1) {
+                    formattedAmount = xtooAmount.toFixed(1);
+                } else {
+                    formattedAmount = xtooAmount.toFixed(8).replace(/\.?0+$/, '');
+                }
+                
+                const timeAgo = getTimeAgo(tx.timeStamp);
+                
+                return `
+                    <div class="bg-emerald-600/10 border border-emerald-500/30 rounded-lg p-4 mb-3">
+                        <div class="text-white font-mono text-sm leading-relaxed mb-2">
+                            Transfer ${timeAgo} IN ${walletAddress} ${formattedAmount} Xtoom (XTOO)
+                        </div>
+                        <div class="text-xs text-gray-400 grid grid-cols-1 gap-1">
+                            <div>From: <span class="font-mono text-gray-300">${tx.from}</span></div>
+                            <div>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank" class="text-purple-400 hover:underline font-mono">${tx.hash}</a></div>
+                            <div>Block: <span class="font-mono text-gray-300">${tx.blockNumber}</span></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('content').innerHTML += `
+                <div class="mt-6 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-6">
+                    <h4 class="font-bold text-emerald-400 mb-4">✅ ${filteredTransactions.length} XTOO Transfer(s) Found</h4>
+                    <div class="text-center mb-4">
+                        <div class="text-sm font-semibold text-emerald-400">🔍 Filter Applied</div>
+                        <div class="text-xs text-gray-300 mt-1">Method: Transfer, IN: ${walletAddress}, Token: Xtoom (XTOO)</div>
+                    </div>
+                    ${transactionsList}
+                </div>
+            `;
+        }
+
+        async function testEtherscanV2() {
+            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const chainId = document.getElementById('chainId').value;
+            const contractAddress = document.getElementById('contractAddress').value.trim();
+            
+            if (!walletAddress) {
+                log('❌ Error: Please provide wallet address');
+                return;
+            }
+
+            log('🚀 Testing Etherscan V2 API...', {
+                wallet: walletAddress,
+                chainId: chainId,
+                chainName: chainId === '56' ? 'BSC' : 'Other',
+                contract: contractAddress
+            });
+
+            try {
+                // Method 1: Direct contract token transactions (V2)
+                log('📡 Method 1: V2 Direct contract token transactions...');
+                const v2DirectUrl = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=tokentx&contractaddress=${contractAddress}&address=${walletAddress}&page=1&offset=50&sort=desc&apikey=YourApiKeyToken`;
+                
+                log('🔗 V2 Direct API URL', v2DirectUrl);
+                
+                const v2DirectResponse = await fetch(v2DirectUrl);
+                const v2DirectData = await v2DirectResponse.json();
+                
+                log('📥 V2 Direct API Response', {
+                    status: v2DirectData.status,
+                    message: v2DirectData.message,
+                    resultCount: v2DirectData.result ? v2DirectData.result.length : 0
+                });
+                
+                if (v2DirectData.status === '1' && v2DirectData.result && v2DirectData.result.length > 0) {
+                    log('✅ V2 Direct API Success!', `Found ${v2DirectData.result.length} transactions`);
+                    displayTransactions(v2DirectData.result, walletAddress);
+                    return;
+                } else {
+                    log('⚠️ V2 Direct API no results', v2DirectData.message || 'Unknown error');
+                }
+
+            } catch (error) {
+                log('❌ V2 Direct API Error', error.message);
+            }
+
+            try {
+                // Method 2: Generic token transactions (V2)
+                log('📡 Method 2: V2 Generic token transactions...');
+                const v2GenericUrl = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=tokentx&address=${walletAddress}&page=1&offset=50&sort=desc&apikey=YourApiKeyToken`;
+                
+                const v2GenericResponse = await fetch(v2GenericUrl);
+                const v2GenericData = await v2GenericResponse.json();
+                
+                log('📥 V2 Generic API Response', {
+                    status: v2GenericData.status,
+                    message: v2GenericData.message,
+                    resultCount: v2GenericData.result ? v2GenericData.result.length : 0
+                });
+                
+                if (v2GenericData.status === '1' && v2GenericData.result && v2GenericData.result.length > 0) {
+                    // Filter for XTOO transactions
+                    const xtooTxs = v2GenericData.result.filter(tx => 
+                        tx.contractAddress && tx.contractAddress.toLowerCase() === contractAddress.toLowerCase()
+                    );
+                    
+                    log('✅ V2 Generic API filtered results', `Found ${xtooTxs.length} XTOO transactions out of ${v2GenericData.result.length} total`);
+                    
+                    if (xtooTxs.length > 0) {
+                        displayTransactions(xtooTxs, walletAddress);
+                        return;
+                    } else {
+                        log('📋 All contracts found (first 5)', v2GenericData.result.slice(0, 5).map(tx => ({
+                            contract: tx.contractAddress,
+                            symbol: tx.tokenSymbol,
+                            name: tx.tokenName
+                        })));
+                    }
+                }
+
+            } catch (error) {
+                log('❌ V2 Generic API Error', error.message);
+            }
+
+            log('💡 No XTOO transactions found with V2 API', {
+                suggestion: 'Check if wallet has XTOO transactions on the selected chain',
+                bscscanLink: `https://bscscan.com/address/${walletAddress}#tokentxns`
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testV2Btn').addEventListener('click', testEtherscanV2);
+        });
+    </script>
+</body>
+</html>

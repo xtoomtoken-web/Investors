@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test XTOO History Filter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🔍 Test XTOO History Filter</h1>
+        
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Filter Configuration</h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                        <div class="text-sm text-gray-400">Method</div>
+                        <div class="font-bold text-purple-400">Transfer</div>
+                    </div>
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                        <div class="text-sm text-gray-400">Direction</div>
+                        <div class="font-bold text-emerald-400">IN Only</div>
+                    </div>
+                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                        <div class="text-sm text-gray-400">Token</div>
+                        <div class="font-bold text-blue-400">Xtoom (XTOO)</div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Target Wallet (IN):</label>
+                    <input type="text" id="testAddress" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                           value="0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2">
+                </div>
+                
+                <button id="testFilterBtn" 
+                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                    🔍 Test History Filter
+                </button>
+            </div>
+        </div>
+
+        <!-- Expected Format Example -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <div class="bg-emerald-600/10 border border-emerald-500/30 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-emerald-400 mb-4">Expected Format Example</h3>
+                <div class="bg-slate-700 rounded-lg p-4 border border-emerald-500/30">
+                    <div class="font-mono text-emerald-300">
+                        Transfer 12 days ago IN 0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2 29.1 Xtoom (XTOO)
+                    </div>
+                </div>
+                <div class="text-sm text-gray-400 mt-2">
+                    ✅ Method: Transfer | ✅ Time: "12 days ago" | ✅ Direction: IN | ✅ Wallet: Connected wallet | ✅ Amount: Clean decimals | ✅ Token: Xtoom (XTOO)
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div id="testResults" class="max-w-4xl mx-auto">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                <h3 class="text-xl font-bold text-white mb-4">Filter Test Results</h3>
+                <div id="resultsContent" class="text-sm text-gray-300">
+                    <p>Click "Test History Filter" to see results...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated XTOO transactions with the exact format requested
+        const testTransactions = [
+            {
+                hash: "0x726c5a8b7324ec56c5045d27e0f5368c4f08c25bd00d831c8bc0afcfac3dc99c",
+                from: "0xa5D396494eFEc679d9BA8D9b3565a60c1234567890",
+                to: "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2",
+                value: "29100000000000000000",  // 29.1 XTOO (exactly like your example)
+                tokenDecimal: "18",
+                tokenSymbol: "XTOO",
+                tokenName: "Xtoom Token",
+                timeStamp: Math.floor(Date.now() / 1000) - (12 * 24 * 3600), // 12 days ago
+                contractAddress: "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a"
+            },
+            {
+                hash: "0xfe37cdb4c49a23d9e6a894f40726170787eb7c1c1d93468424037e5ded846feb",
+                from: "0xB9705cEBe97eF35B914c19E7e19c1a156dB5C44b",
+                to: "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2",
+                value: "50500000000000000000",  // 50.5 XTOO
+                tokenDecimal: "18",
+                tokenSymbol: "XTOO",
+                tokenName: "Xtoom Token",
+                timeStamp: Math.floor(Date.now() / 1000) - (15 * 24 * 3600), // 15 days ago
+                contractAddress: "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a"
+            },
+            {
+                hash: "0x5907127b8f15bc44e683c71e375dd7286e8a29688e8c0a726f717300f6eac324",
+                from: "0xB9705cEBe97eF35B914c19E7e19c1a156dB5C44b",
+                to: "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2",
+                value: "100000000000000000000",  // 100 XTOO
+                tokenDecimal: "18",
+                tokenSymbol: "XTOO", 
+                tokenName: "Xtoom Token",
+                timeStamp: Math.floor(Date.now() / 1000) - (18 * 24 * 3600), // 18 days ago
+                contractAddress: "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a"
+            },
+            // This should be FILTERED OUT (OUT transaction)
+            {
+                hash: "0x81568b450b5dd75aa32bc86d186ed20ecc1c393e7eed0fd3b2365ef85961f818",
+                from: "0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2",
+                to: "0xB9705cEBe97eF35B914c19E7e19c1a156dB5C44b",
+                value: "25000000000000000000",  // 25 XTOO - OUT transaction should be filtered
+                tokenDecimal: "18",
+                tokenSymbol: "XTOO",
+                tokenName: "Xtoom Token",
+                timeStamp: Math.floor(Date.now() / 1000) - (20 * 24 * 3600), // 20 days ago
+                contractAddress: "0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a"
+            }
+        ];
+
+        function getTimeAgo(timestamp) {
+            const now = Date.now();
+            const txDate = parseInt(timestamp) * 1000;
+            const diffMs = now - txDate;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                if (diffHours === 0) {
+                    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+                }
+                return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+            } else if (diffDays === 1) {
+                return '1 day ago';
+            } else {
+                return `${diffDays} days ago`;
+            }
+        }
+
+        function testHistoryFilter() {
+            const userAddress = document.getElementById('testAddress').value.trim().toLowerCase();
+            const resultsContent = document.getElementById('resultsContent');
+            
+            // Step 1: Filter for ONLY incoming (IN) transactions
+            const incomingTransactions = testTransactions.filter(tx => 
+                tx.to && tx.to.toLowerCase() === userAddress
+            );
+            
+            resultsContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                        <h4 class="font-bold text-purple-400 mb-2">🔍 Filter Applied</h4>
+                        <div class="text-sm text-gray-300">
+                            <p>Method: Transfer | IN: ${userAddress} | Token: Xtoom (XTOO)</p>
+                            <p class="text-xs text-gray-400 mt-1">Total transactions found: ${testTransactions.length}</p>
+                            <p class="text-xs text-emerald-400">After IN filter: ${incomingTransactions.length}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        ${incomingTransactions.map(tx => {
+                            const xtooAmount = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18));
+                            let formattedAmount;
+                            if (xtooAmount % 1 === 0) {
+                                formattedAmount = xtooAmount.toString();
+                            } else {
+                                formattedAmount = xtooAmount.toFixed(6).replace(/\.?0+$/, '');
+                            }
+                            
+                            const timeAgo = getTimeAgo(tx.timeStamp);
+                            
+                            return `
+                                <div class="bg-emerald-600/10 border border-emerald-500/30 rounded-lg p-4">
+                                    <div class="font-mono text-emerald-300 mb-2">
+                                        Transfer ${timeAgo} IN ${userAddress.substring(0, 10)}...${userAddress.substring(userAddress.length - 6)} ${formattedAmount} Xtoom (XTOO)
+                                    </div>
+                                    <div class="text-xs text-gray-400">
+                                        <p>From: ${tx.from}</p>
+                                        <p>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank" class="text-purple-400 hover:underline">${tx.hash.substring(0, 20)}...</a></p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div class="bg-gray-600/10 border border-gray-500/30 rounded-lg p-4">
+                        <h4 class="font-bold text-gray-400 mb-2">📊 Summary</h4>
+                        <div class="text-sm text-gray-300">
+                            <p>✅ Only IN transactions shown</p>
+                            <p>✅ Format: "Transfer X days ago IN wallet XX.X Xtoom (XTOO)"</p>
+                            <p>✅ Clean decimal formatting (no trailing zeros)</p>
+                            <p>❌ OUT transactions filtered out (${testTransactions.length - incomingTransactions.length} removed)</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testFilterBtn').addEventListener('click', testHistoryFilter);
+        });
+    </script>
+</body>
+</html>

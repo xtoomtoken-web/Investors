@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test MetaMask Simple</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            background: #222; 
+            color: white; 
+        }
+        button { 
+            padding: 15px 30px; 
+            font-size: 18px; 
+            background: #0066cc; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px 5px;
+        }
+        button:hover { 
+            background: #0055aa; 
+        }
+        .info { 
+            background: #333; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-family: monospace;
+        }
+        .success { background: #006600; }
+        .error { background: #cc0000; }
+        .warning { background: #cc6600; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test MetaMask Ultra Simple</h1>
+    
+    <div class="info">
+        <h3>Estado Actual:</h3>
+        <div id="status">Verificando...</div>
+    </div>
+    
+    <button onclick="step1()">1️⃣ Verificar window.ethereum</button>
+    <button onclick="step2()">2️⃣ Verificar isMetaMask</button>
+    <button onclick="step3()">3️⃣ Test Request Simple</button>
+    <button onclick="step4()">4️⃣ Conectar Cuenta</button>
+    <button onclick="resetTest()">🔄 Reset Test</button>
+    
+    <div id="results" class="info"></div>
+    
+    <hr>
+    <h3>📋 Checklist Manual:</h3>
+    <ul>
+        <li>¿Estás en ventana normal (NO incógnito)?</li>
+        <li>¿MetaMask aparece en la barra de extensiones?</li>
+        <li>¿MetaMask está desbloqueado (sin candado)?</li>
+        <li>¿Puedes hacer clic en MetaMask y ver tu billetera?</li>
+    </ul>
+
+    <script>
+        let results = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            results.push(`<div class="${type}">[${timestamp}] ${message}</div>`);
+            document.getElementById('results').innerHTML = results.join('');
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        function resetTest() {
+            results = [];
+            document.getElementById('results').innerHTML = '';
+            updateStatus('Test reseteado');
+        }
+        
+        // Paso 1: Verificar window.ethereum
+        function step1() {
+            log('🔍 PASO 1: Verificando window.ethereum...', 'info');
+            
+            if (typeof window.ethereum !== 'undefined') {
+                log('✅ window.ethereum ENCONTRADO!', 'success');
+                log(`Tipo: ${typeof window.ethereum}`, 'info');
+                log(`Constructor: ${window.ethereum.constructor.name}`, 'info');
+                updateStatus('window.ethereum detectado', 'success');
+            } else {
+                log('❌ window.ethereum NO ENCONTRADO', 'error');
+                log('Esto significa que MetaMask no está cargado correctamente', 'error');
+                updateStatus('window.ethereum NO detectado', 'error');
+            }
+        }
+        
+        // Paso 2: Verificar si es MetaMask
+        function step2() {
+            log('🔍 PASO 2: Verificando si es MetaMask...', 'info');
+            
+            if (typeof window.ethereum === 'undefined') {
+                log('❌ Primero ejecuta el Paso 1', 'error');
+                return;
+            }
+            
+            if (window.ethereum.isMetaMask) {
+                log('✅ ES METAMASK!', 'success');
+                log(`Versión: ${window.ethereum.version || 'No disponible'}`, 'info');
+                updateStatus('MetaMask confirmado', 'success');
+            } else {
+                log('⚠️ Es otro proveedor Web3', 'warning');
+                log('Puede ser Coinbase Wallet u otro', 'warning');
+                updateStatus('No es MetaMask', 'warning');
+            }
+        }
+        
+        // Paso 3: Test request simple
+        async function step3() {
+            log('🔍 PASO 3: Test request simple...', 'info');
+            
+            if (typeof window.ethereum === 'undefined') {
+                log('❌ Primero ejecuta el Paso 1', 'error');
+                return;
+            }
+            
+            try {
+                log('Enviando eth_chainId...', 'info');
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                log(`✅ ChainId recibido: ${chainId} (${parseInt(chainId, 16)})`, 'success');
+                updateStatus('Request funcionando', 'success');
+            } catch (error) {
+                log(`❌ Error en request: ${error.message}`, 'error');
+                log(`Código: ${error.code}`, 'error');
+                updateStatus('Request falló', 'error');
+            }
+        }
+        
+        // Paso 4: Conectar cuenta
+        async function step4() {
+            log('🔍 PASO 4: Conectando cuenta...', 'info');
+            
+            if (typeof window.ethereum === 'undefined') {
+                log('❌ Primero ejecuta el Paso 1', 'error');
+                return;
+            }
+            
+            try {
+                log('Solicitando cuentas...', 'info');
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts.length > 0) {
+                    log(`✅ ÉXITO! Conectado a: ${accounts[0]}`, 'success');
+                    updateStatus(`Conectado: ${accounts[0].substring(0,10)}...`, 'success');
+                } else {
+                    log('❌ No se recibieron cuentas', 'error');
+                    updateStatus('Sin cuentas', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error conectando: ${error.message}`, 'error');
+                log(`Código: ${error.code}`, 'error');
+                
+                if (error.code === 4001) {
+                    log('Usuario rechazó la conexión', 'warning');
+                } else if (error.code === -32002) {
+                    log('Ya hay una solicitud pendiente', 'warning');
+                }
+                
+                updateStatus('Conexión falló', 'error');
+            }
+        }
+        
+        // Auto-verificación al cargar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🚀 Página cargada, verificación automática...', 'info');
+                step1();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

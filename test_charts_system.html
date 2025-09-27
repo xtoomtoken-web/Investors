@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Charts Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white p-8">
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center">📊 Interactive Charts System Test</h1>
+        
+        <div class="flex justify-center gap-4 mb-8">
+            <button id="testROIChart" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold">
+                📈 Test ROI Chart
+            </button>
+            <button id="testPortfolioChart" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold">
+                🥧 Test Portfolio Chart
+            </button>
+            <button id="testPricesChart" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold">
+                💹 Test Prices Chart
+            </button>
+            <button id="testProgressChart" class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-semibold">
+                🏆 Test Progress Chart
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- ROI Trend Chart -->
+            <div class="bg-gradient-to-r from-emerald-600/20 to-emerald-800/20 rounded-2xl p-6 backdrop-blur-sm border border-emerald-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">📈 ROI Trend Over Time</h3>
+                    <div class="text-sm text-gray-400">Test Data</div>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="roiTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Portfolio Distribution Chart -->
+            <div class="bg-gradient-to-r from-purple-600/20 to-purple-800/20 rounded-2xl p-6 backdrop-blur-sm border border-purple-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">🥧 Portfolio Distribution</h3>
+                    <div class="text-sm text-gray-400" id="portfolioValue">$0.00</div>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="portfolioChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Token Prices Comparison Chart -->
+            <div class="bg-gradient-to-r from-blue-600/20 to-blue-800/20 rounded-2xl p-6 backdrop-blur-sm border border-blue-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">💹 Token Prices Comparison</h3>
+                    <div class="text-sm text-gray-400">Simulated Data</div>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="pricesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Investment Progress Chart -->
+            <div class="bg-gradient-to-r from-amber-600/20 to-amber-800/20 rounded-2xl p-6 backdrop-blur-sm border border-amber-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">🏆 Investment Progress</h3>
+                    <div class="text-sm text-gray-400" id="progressChartLevel">Current Level</div>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800/50 rounded-2xl p-6 backdrop-blur-sm border border-white/10 mt-8">
+            <h2 class="text-xl font-semibold mb-4">Test Results</h2>
+            <div id="testResults" class="text-gray-300 space-y-2">
+                <p>Click the buttons above to test each chart type.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Investor levels for testing
+        const INVESTOR_LEVELS = {
+            FAN: { min: 0, max: 2499, name: 'Fan Investor', color: 'blue', emoji: '🌟' },
+            PRO: { min: 2500, max: 4999, name: 'Pro Investor', color: 'yellow', emoji: '⚡' },
+            VIP: { min: 5000, max: Infinity, name: 'VIP Investor', color: 'purple', emoji: '👑' }
+        };
+
+        function getInvestorLevel(xtoomAmount) {
+            if (xtoomAmount >= INVESTOR_LEVELS.VIP.min) return INVESTOR_LEVELS.VIP;
+            if (xtoomAmount >= INVESTOR_LEVELS.PRO.min) return INVESTOR_LEVELS.PRO;
+            return INVESTOR_LEVELS.FAN;
+        }
+
+        // Chart manager class (copied from main dashboard)
+        class ChartManager {
+            constructor() {
+                this.charts = new Map();
+                this.historicalData = {
+                    roiHistory: [],
+                    priceHistory: new Map(),
+                    portfolioHistory: []
+                };
+                this.isChartsVisible = true;
+            }
+
+            getBaseChartConfig() {
+                return {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff',
+                                font: { size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#6366f1',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                        }
+                    }
+                };
+            }
+
+            createROITrendChart() {
+                const ctx = document.getElementById('roiTrendChart');
+                if (!ctx) return;
+
+                const config = {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'ROI %',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        ...this.getBaseChartConfig(),
+                        scales: {
+                            ...this.getBaseChartConfig().scales,
+                            y: {
+                                ...this.getBaseChartConfig().scales.y,
+                                title: {
+                                    display: true,
+                                    text: 'ROI Percentage (%)',
+                                    color: '#9ca3af'
+                                }
+                            },
+                            x: {
+                                ...this.getBaseChartConfig().scales.x,
+                                title: {
+                                    display: true,
+                                    text: 'Date',
+                                    color: '#9ca3af'
+                                }
+                            }
+                        },
+                        plugins: {
+                            ...this.getBaseChartConfig().plugins,
+                            tooltip: {
+                                ...this.getBaseChartConfig().plugins.tooltip,
+                                callbacks: {
+                                    label: (context) => {
+                                        return `ROI: ${context.parsed.y.toFixed(2)}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                this.charts.set('roi', new Chart(ctx, config));
+            }
+
+            createPortfolioChart() {
+                const ctx = document.getElementById('portfolioChart');
+                if (!ctx) return;
+
+                const config = {
+                    type: 'doughnut',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [],
+                            backgroundColor: [
+                                '#3b82f6', // Blue - BNB
+                                '#8b5cf6', // Purple - XTOO
+                                '#10b981', // Emerald - ADA
+                                '#f59e0b', // Amber - WLF
+                                '#ef4444', // Red - XRP
+                                '#6b7280'  // Gray - Others
+                            ],
+                            borderColor: '#1f2937',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        ...this.getBaseChartConfig(),
+                        plugins: {
+                            ...this.getBaseChartConfig().plugins,
+                            tooltip: {
+                                ...this.getBaseChartConfig().plugins.tooltip,
+                                callbacks: {
+                                    label: (context) => {
+                                        const label = context.label || '';
+                                        const value = context.parsed;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                this.charts.set('portfolio', new Chart(ctx, config));
+            }
+
+            createPricesChart() {
+                const ctx = document.getElementById('pricesChart');
+                if (!ctx) return;
+
+                const config = {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'XTOO',
+                                data: [],
+                                borderColor: '#8b5cf6',
+                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                borderWidth: 2,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'BNB',
+                                data: [],
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                borderWidth: 2,
+                                yAxisID: 'y1'
+                            },
+                            {
+                                label: 'ADA',
+                                data: [],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                borderWidth: 2,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        ...this.getBaseChartConfig(),
+                        scales: {
+                            x: {
+                                ...this.getBaseChartConfig().scales.x,
+                                title: {
+                                    display: true,
+                                    text: 'Time',
+                                    color: '#9ca3af'
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                ticks: { color: '#8b5cf6' },
+                                grid: { color: 'rgba(139, 92, 246, 0.1)' },
+                                title: {
+                                    display: true,
+                                    text: 'XTOO Price ($)',
+                                    color: '#8b5cf6'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                ticks: { color: '#f59e0b' },
+                                grid: { drawOnChartArea: false },
+                                title: {
+                                    display: true,
+                                    text: 'Other Tokens ($)',
+                                    color: '#f59e0b'
+                                }
+                            }
+                        }
+                    }
+                };
+
+                this.charts.set('prices', new Chart(ctx, config));
+            }
+
+            createProgressChart() {
+                const ctx = document.getElementById('progressChart');
+                if (!ctx) return;
+
+                const config = {
+                    type: 'bar',
+                    data: {
+                        labels: ['Current XTOO', 'To Pro Level', 'To VIP Level'],
+                        datasets: [{
+                            label: 'XTOO Tokens',
+                            data: [],
+                            backgroundColor: [
+                                '#3b82f6', // Current - Blue
+                                '#f59e0b', // To Pro - Amber
+                                '#8b5cf6'  // To VIP - Purple
+                            ],
+                            borderColor: '#1f2937',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        ...this.getBaseChartConfig(),
+                        scales: {
+                            ...this.getBaseChartConfig().scales,
+                            y: {
+                                ...this.getBaseChartConfig().scales.y,
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'XTOO Tokens',
+                                    color: '#9ca3af'
+                                }
+                            }
+                        },
+                        plugins: {
+                            ...this.getBaseChartConfig().plugins,
+                            tooltip: {
+                                ...this.getBaseChartConfig().plugins.tooltip,
+                                callbacks: {
+                                    label: (context) => {
+                                        return `${context.label}: ${context.parsed.y.toLocaleString()} XTOO`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                this.charts.set('progress', new Chart(ctx, config));
+            }
+
+            initializeCharts() {
+                this.createROITrendChart();
+                this.createPortfolioChart();
+                this.createPricesChart();
+                this.createProgressChart();
+                addTestResult('📊 All charts initialized successfully!', 'text-green-400');
+            }
+
+            updateROIChart(roiHistory) {
+                const chart = this.charts.get('roi');
+                if (!chart) return;
+
+                if (roiHistory.length === 0) {
+                    roiHistory = this.generateSampleROIData();
+                }
+
+                chart.data.labels = roiHistory.map(item => item.date.toLocaleDateString());
+                chart.data.datasets[0].data = roiHistory.map(item => item.roi);
+                chart.update();
+                addTestResult('📈 ROI chart updated with sample data', 'text-emerald-400');
+            }
+
+            updatePortfolioChart(tokens) {
+                const chart = this.charts.get('portfolio');
+                if (!chart) return;
+
+                if (!tokens || tokens.length === 0) {
+                    tokens = [
+                        { symbol: 'BNB', name: 'Binance Coin', value: 1500 },
+                        { symbol: 'XTOO', name: 'Xtoom', value: 800 },
+                        { symbol: 'ADA', name: 'Cardano', value: 450 },
+                        { symbol: 'WLF', name: 'World Liberty Financial', value: 200 },
+                        { symbol: 'XRP', name: 'XRP', value: 350 }
+                    ];
+                }
+
+                const filteredTokens = tokens.filter(token => token.value > 0);
+                chart.data.labels = filteredTokens.map(token => `${token.symbol} (${token.name})`);
+                chart.data.datasets[0].data = filteredTokens.map(token => token.value);
+                
+                const totalValue = filteredTokens.reduce((sum, token) => sum + token.value, 0);
+                document.getElementById('portfolioValue').textContent = `$${totalValue.toLocaleString()}`;
+                
+                chart.update();
+                addTestResult('🥧 Portfolio chart updated with sample tokens', 'text-purple-400');
+            }
+
+            updatePricesChart(priceData) {
+                const chart = this.charts.get('prices');
+                if (!chart) return;
+
+                if (!priceData || Object.keys(priceData).length === 0) {
+                    priceData = this.generateSamplePriceData();
+                }
+
+                const timestamps = priceData.timestamps || [];
+                chart.data.labels = timestamps.map(t => t.toLocaleTimeString());
+
+                if (priceData.XTOO) {
+                    chart.data.datasets[0].data = priceData.XTOO;
+                }
+
+                if (priceData.BNB) {
+                    chart.data.datasets[1].data = priceData.BNB;
+                }
+
+                if (priceData.ADA) {
+                    chart.data.datasets[2].data = priceData.ADA;
+                }
+
+                chart.update();
+                addTestResult('💹 Price comparison chart updated', 'text-blue-400');
+            }
+
+            updateProgressChart(currentXtoo) {
+                const chart = this.charts.get('progress');
+                if (!chart) return;
+
+                if (!currentXtoo || currentXtoo === 0) {
+                    currentXtoo = 3200; // Sample data
+                }
+
+                const toProLevel = Math.max(0, 2500 - currentXtoo);
+                const toVipLevel = Math.max(0, 5000 - currentXtoo);
+
+                chart.data.datasets[0].data = [currentXtoo, toProLevel, toVipLevel];
+
+                const level = getInvestorLevel(currentXtoo);
+                document.getElementById('progressChartLevel').textContent = `${level.emoji} ${level.name}`;
+
+                chart.update();
+                addTestResult(`🏆 Progress chart updated - ${level.name}`, 'text-amber-400');
+            }
+
+            generateSampleROIData() {
+                const data = [];
+                const now = new Date();
+                for (let i = 29; i >= 0; i--) {
+                    const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+                    const baseROI = Math.sin(i * 0.1) * 10 + Math.random() * 5;
+                    data.push({
+                        date: date,
+                        roi: baseROI
+                    });
+                }
+                return data;
+            }
+
+            generateSamplePriceData() {
+                const timestamps = [];
+                const xtooData = [];
+                const bnbData = [];
+                const adaData = [];
+                
+                const now = Date.now();
+                for (let i = 23; i >= 0; i--) {
+                    const time = new Date(now - (i * 60 * 60 * 1000));
+                    timestamps.push(time);
+                    
+                    xtooData.push(0.001 + Math.sin(i * 0.2) * 0.0005 + Math.random() * 0.0001);
+                    bnbData.push(600 + Math.sin(i * 0.15) * 50 + Math.random() * 10);
+                    adaData.push(0.5 + Math.sin(i * 0.25) * 0.1 + Math.random() * 0.02);
+                }
+
+                return {
+                    timestamps,
+                    XTOO: xtooData,
+                    BNB: bnbData,
+                    ADA: adaData
+                };
+            }
+        }
+
+        const chartManager = new ChartManager();
+
+        function addTestResult(message, className = 'text-gray-300') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const resultItem = document.createElement('div');
+            resultItem.className = `${className} text-sm`;
+            resultItem.textContent = `[${timestamp}] ${message}`;
+            resultsDiv.appendChild(resultItem);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            addTestResult('🚀 Chart testing page loaded', 'text-green-400');
+            
+            // Initialize charts
+            chartManager.initializeCharts();
+            
+            // Test buttons
+            document.getElementById('testROIChart').addEventListener('click', () => {
+                chartManager.updateROIChart([]);
+            });
+
+            document.getElementById('testPortfolioChart').addEventListener('click', () => {
+                chartManager.updatePortfolioChart([]);
+            });
+
+            document.getElementById('testPricesChart').addEventListener('click', () => {
+                chartManager.updatePricesChart();
+            });
+
+            document.getElementById('testProgressChart').addEventListener('click', () => {
+                chartManager.updateProgressChart(3200);
+            });
+        });
+    </script>
+</body>
+</html>

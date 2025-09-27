@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🧪 Modal Test</h1>
+        
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <button id="testChart" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                📈 Test Chart Modal
+            </button>
+            
+            <button id="testBuySell" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200">
+                💰 Test Buy/Sell Modal
+            </button>
+        </div>
+
+        <!-- Chart Modal -->
+        <div id="chartModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] border border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
+                <div class="flex items-center justify-between p-3 sm:p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">📈 XTOO Price Chart</h2>
+                    <button id="closeChartModal" class="text-gray-400 hover:text-white text-2xl transition-colors">×</button>
+                </div>
+                <div class="relative w-full h-[75vh] sm:h-[70vh]">
+                    <iframe id="chartIframe" src="" class="w-full h-full border-0" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buy/Sell Modal -->
+        <div id="buySellModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-md w-full border border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
+                <div class="flex items-center justify-between p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">💰 Buy / Sell XTOO</h2>
+                    <button id="closeBuySellModal" class="text-gray-400 hover:text-white text-2xl transition-colors">×</button>
+                </div>
+                <div class="p-6">
+                    <div class="text-center space-y-4">
+                        <div class="text-gray-300 mb-4">
+                            <p class="mb-2">Trade XTOO on Matcha DEX</p>
+                            <p class="text-sm text-gray-400">Best prices across BSC exchanges</p>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-purple-600/20 to-purple-800/20 rounded-lg p-4 border border-purple-500/30">
+                            <div class="flex items-center justify-center space-x-2 mb-2">
+                                <span class="text-purple-400">🔗</span>
+                                <span class="font-semibold text-white">XTOO Trading Pair</span>
+                            </div>
+                            <p class="text-xs text-gray-400 font-mono break-all">0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a</p>
+                        </div>
+
+                        <button id="openMatcha" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2">
+                            <span>🚀</span>
+                            <span>Open Matcha DEX</span>
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+
+                        <p class="text-xs text-gray-500 mt-3">
+                            Opens in new tab • Secure trading on BSC
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <p class="text-gray-400">✅ Both modals now use the same purple theme (matching Investor panel)</p>
+            <p class="text-gray-400">✅ Both modals are centered and use the same styling</p>
+            <p class="text-gray-400">✅ Click outside modal or X button to close</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Test Chart Modal
+            document.getElementById('testChart').addEventListener('click', function() {
+                const chartUrl = 'https://www.geckoterminal.com/bsc/pools/0x934a02c24699598daef464cd0fbc81c57f262fa0';
+                document.getElementById('chartIframe').src = chartUrl;
+                document.getElementById('chartModal').classList.remove('hidden');
+            });
+
+            // Test Buy/Sell Modal
+            document.getElementById('testBuySell').addEventListener('click', function() {
+                document.getElementById('buySellModal').classList.remove('hidden');
+            });
+
+            // Open Matcha DEX button
+            document.getElementById('openMatcha').addEventListener('click', function() {
+                const matcha_url = 'https://matcha.xyz/tokens/bsc/0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a';
+                window.open(matcha_url, '_blank');
+                document.getElementById('buySellModal').classList.add('hidden');
+            });
+
+            // Close Chart Modal
+            document.getElementById('closeChartModal').addEventListener('click', function() {
+                document.getElementById('chartModal').classList.add('hidden');
+                document.getElementById('chartIframe').src = '';
+            });
+
+            // Close Chart Modal when clicking outside
+            document.getElementById('chartModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                    document.getElementById('chartIframe').src = '';
+                }
+            });
+
+            // Close Buy/Sell Modal
+            document.getElementById('closeBuySellModal').addEventListener('click', function() {
+                document.getElementById('buySellModal').classList.add('hidden');
+            });
+
+            // Close Buy/Sell Modal when clicking outside
+            document.getElementById('buySellModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

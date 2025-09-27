@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XTOO History Button Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">🕐 XTOO History Button Added</h1>
+        
+        <!-- Action Buttons Preview -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <button class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <span>💰 Buy / Sell XTOO</span>
+            </button>
+            
+            <button class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L3.5 15.9l0 2.59z"/>
+                </svg>
+                <span>View XTOO Chart</span>
+            </button>
+            
+            <button id="testHistoryBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg w-full sm:w-auto">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>XTOO History</span>
+            </button>
+        </div>
+
+        <!-- XTOO History Modal -->
+        <div id="historyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div class="bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] border border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
+                <div class="flex items-center justify-between p-3 sm:p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">🕐 XTOO Transaction History</h2>
+                    <button id="closeHistoryModal" class="text-gray-400 hover:text-white text-2xl transition-colors">×</button>
+                </div>
+                <div class="p-4 max-h-[75vh] sm:max-h-[70vh] overflow-y-auto">
+                    <div id="historyContent">
+                        <!-- Transaction Summary -->
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white mb-2">📊 Transaction Summary</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 text-center">
+                                    <div class="text-purple-400 font-bold">15</div>
+                                    <div class="text-xs text-gray-400">Total Transactions</div>
+                                </div>
+                                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
+                                    <div class="text-emerald-400 font-bold">8</div>
+                                    <div class="text-xs text-gray-400">Received</div>
+                                </div>
+                                <div class="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 text-center">
+                                    <div class="text-orange-400 font-bold">7</div>
+                                    <div class="text-xs text-gray-400">Sent</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sample Transactions -->
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-bold text-white mb-3">📋 Recent Transactions</h3>
+                            
+                            <!-- Received Transaction -->
+                            <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 transition-colors">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-500/20 text-emerald-400">
+                                            ↓
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-emerald-400">
+                                                Received 1,250.000000 XTOO
+                                            </div>
+                                            <div class="text-xs text-gray-400">Sep 26, 2024, 10:30:45 AM</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-gray-400">Hash</div>
+                                        <a href="#" class="text-purple-400 hover:text-purple-300 text-xs font-mono">
+                                            0x1234567...89abcdef
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    <span class="text-emerald-400">From:</span>
+                                    <span class="font-mono ml-1">0x9876543...21fedcba</span>
+                                </div>
+                            </div>
+
+                            <!-- Sent Transaction -->
+                            <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 transition-colors">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 rounded-full flex items-center justify-center bg-orange-500/20 text-orange-400">
+                                            ↑
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-orange-400">
+                                                Sent 500.000000 XTOO
+                                            </div>
+                                            <div class="text-xs text-gray-400">Sep 25, 2024, 3:15:22 PM</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-gray-400">Hash</div>
+                                        <a href="#" class="text-purple-400 hover:text-purple-300 text-xs font-mono">
+                                            0xabcdef1...23456789
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    <span class="text-orange-400">To:</span>
+                                    <span class="font-mono ml-1">0xfedcba9...87654321</span>
+                                </div>
+                            </div>
+
+                            <!-- More transactions indicator -->
+                            <div class="text-center py-4">
+                                <p class="text-gray-400 text-sm">... and 13 more transactions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Description -->
+        <div class="max-w-4xl mx-auto mt-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                    <h3 class="text-xl font-bold text-white mb-4">✅ New Features</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center space-x-2">
+                            <span class="text-purple-400">🔘</span>
+                            <span>Purple gradient button (matches theme)</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-purple-400">🔘</span>
+                            <span>Clock icon for history indication</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-purple-400">🔘</span>
+                            <span>Modal with purple border theme</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-purple-400">🔘</span>
+                            <span>Transaction summary statistics</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-purple-400">🔘</span>
+                            <span>Detailed transaction list with amounts</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-purple-400">🔘</span>
+                            <span>Links to BSCScan for transaction details</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-600">
+                    <h3 class="text-xl font-bold text-white mb-4">🎯 Functionality</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center space-x-2">
+                            <span class="text-green-400">✅</span>
+                            <span>Fetches XTOO transactions from BSCScan API</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-green-400">✅</span>
+                            <span>Shows received/sent transaction counts</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-green-400">✅</span>
+                            <span>Displays transaction amounts and dates</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-green-400">✅</span>
+                            <span>Shows sender/receiver addresses</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-green-400">✅</span>
+                            <span>Clickable transaction hashes</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <span class="text-green-400">✅</span>
+                            <span>Error handling and retry functionality</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Test History button
+            document.getElementById('testHistoryBtn').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.remove('hidden');
+            });
+
+            // Close history modal
+            document.getElementById('closeHistoryModal').addEventListener('click', function() {
+                document.getElementById('historyModal').classList.add('hidden');
+            });
+
+            // Close history modal when clicking outside
+            document.getElementById('historyModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
