@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 Wallet Dashboard - Final</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-white">Web3 Wallet Dashboard</h1>
+            <div class="flex space-x-4">
+                <button id="connectButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                    <span>Conectar Billetera</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingPanel" class="hidden bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-400"></div>
+                <span id="loadingText">Cargando datos de blockchain...</span>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="hidden bg-green-600/20 border border-green-500/30 rounded-xl p-4 mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>Conectado:</span>
+                    <span id="walletAddress" class="font-mono text-sm"></span>
+                    <span class="ml-4">Red:</span>
+                    <span id="networkName" class="font-semibold"></span>
+                </div>
+                <button onclick="loadAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">
+                    🔄 Actualizar Todo
+                </button>
+            </div>
+        </div>
+
+        <!-- Total Balance Card -->
+        <div id="balanceCard" class="hidden bg-gradient-to-r from-blue-600/20 to-blue-800/20 rounded-2xl p-8 backdrop-blur-sm border border-blue-500/30 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4">Balance Total del Portfolio</h2>
+            <div class="text-5xl font-bold text-blue-400" id="totalBalance">$0.00</div>
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Red</p>
+                    <p class="text-white font-semibold">Binance Smart Chain</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Tokens Encontrados</p>
+                    <p class="text-white font-semibold" id="tokenCount">0</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <p class="text-gray-400 text-sm">Última Actualización</p>
+                    <p class="text-white font-semibold" id="lastUpdate">--:--:--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tokens Grid -->
+        <div id="tokensGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Token cards will be inserted here -->
+        </div>
+
+        <!-- Instructions -->
+        <div id="instructions" class="text-center py-20">
+            <div class="bg-slate-800/50 rounded-2xl p-12 backdrop-blur-sm border border-white/10">
+                <h2 class="text-3xl font-semibold text-white mb-4">Conecta tu Billetera</h2>
+                <p class="text-gray-300 text-lg mb-8">Conecta tu billetera MetaMask para ver TODAS tus criptomonedas en BSC</p>
+                <div class="w-32 h-32 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <svg class="w-16 h-16 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <p class="mb-2">🔍 Este dashboard incluye tokens específicos + escaneo completo</p>
+                    <p class="mb-2">📍 Tokens monitoreados:</p>
+                    <p class="mb-1">• 0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a</p>
+                    <p class="mb-1">• 0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47</p>
+                    <p class="mb-1">• 0x47474747477b199288bF72a1D702f7Fe0Fb1DEeA</p>
+                    <p>🌐 Red: Binance Smart Chain (BSC)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de tokens específicos
+        const SPECIFIC_TOKENS = [
+            {
+                address: '0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a',
+                isTarget: true, // Token principal con API de GeckoTerminal
+                geckoApi: 'https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x934a02c24699598daef464cd0fbc81c57f262fa0'
+            },
+            {
+                address: '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47',
+                name: 'Cardano Token', // ADA en BSC
+                symbol: 'ADA',
+                isKnown: true
+            },
+            {
+                address: '0x47474747477b199288bF72a1D702f7Fe0Fb1DEeA',
+                name: 'Token Personalizado 2',
+                symbol: 'CUSTOM2',
+                isKnown: true
+            }
+        ];
+
+        // Mapeo de nombres personalizados para tokens específicos
+        const TOKEN_NAME_OVERRIDES = {
+            // Por símbolo exacto
+            'XTOO': { name: 'Xtoom', symbol: 'XTOO' },
+            'WBNB': { name: 'Xtoom', symbol: 'XTOO' },
+            'XTOO / WBNB': { name: 'Xtoom', symbol: 'XTOO' },
+            
+            // Por nombre exacto
+            'Unknown Token': { name: 'World Liberty Financial', symbol: 'WLF' },
+            'Unknown': { name: 'World Liberty Financial', symbol: 'WLF' },
+            
+            // Variaciones adicionales que puedan aparecer
+            'XTOO/WBNB': { name: 'Xtoom', symbol: 'XTOO' },
+            'XToo': { name: 'Xtoom', symbol: 'XTOO' },
+            'xtoo': { name: 'Xtoom', symbol: 'XTOO' }
+        };
+
+        const BSC_CHAIN_ID = '0x38';
+        const BSC_RPC = 'https://bsc-dataseed.binance.org/';
+        const BSCSCAN_API = 'https://api.bscscan.com/api';
+        const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+
+        let userAddress = null;
+        let isConnected = false;
+
+        // Utilidades
+        function hexToDecimal(hex) {
+            return parseInt(hex, 16);
+        }
+
+        function formatUnits(value, decimals) {
+            const divisor = Math.pow(10, decimals);
+            const num = parseInt(value, 16);
+            return (num / divisor).toString();
+        }
+
+        function formatEther(weiValue) {
+            return formatUnits(weiValue, 18);
+        }
+
+        // Mostrar/ocultar loading
+        function showLoading(text = 'Cargando datos...') {
+            document.getElementById('loadingPanel').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = text;
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingPanel').classList.add('hidden');
+        }
+
+        // Actualizar UI de conexión
+        function updateConnectionStatus(connected) {
+            const connectButton = document.getElementById('connectButton');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const instructions = document.getElementById('instructions');
+            const balanceCard = document.getElementById('balanceCard');
+            const tokensGrid = document.getElementById('tokensGrid');
+            const walletAddress = document.getElementById('walletAddress');
+            
+            if (connected) {
+                connectButton.innerHTML = `
+                    <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <span>Conectado</span>
+                `;
+                connectButton.className = connectButton.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-green-600 hover:bg-green-700');
+                
+                connectionStatus.classList.remove('hidden');
+                instructions.classList.add('hidden');
+                balanceCard.classList.remove('hidden');
+                tokensGrid.classList.remove('hidden');
+                
+                walletAddress.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+            } else {
+                connectButton.innerHTML = `
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                    <span>Conectar Billetera</span>
+                `;
+                connectButton.className = connectButton.className.replace('bg-green-600 hover:bg-green-700', 'bg-blue-600 hover:bg-blue-700');
+                
+                connectionStatus.classList.add('hidden');
+                instructions.classList.remove('hidden');
+                balanceCard.classList.add('hidden');
+                tokensGrid.classList.add('hidden');
+            }
+        }
+
+        // Obtener información de red
+        async function getNetworkInfo() {
+            if (!window.ethereum) return null;
+            
+            try {
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                const chainIdDecimal = hexToDecimal(chainId);
+                
+                let networkName = 'Red Desconocida';
+                switch (chainIdDecimal) {
+                    case 1: networkName = 'Ethereum'; break;
+                    case 56: networkName = 'BSC'; break;
+                    case 137: networkName = 'Polygon'; break;
+                }
+                
+                document.getElementById('networkName').textContent = `${networkName} (${chainIdDecimal})`;
+                return { chainId: chainIdDecimal, name: networkName };
+            } catch (error) {
+                console.error('Error obteniendo red:', error);
+                return null;
+            }
+        }
+
+        // Cambiar a BSC
+        async function switchToBSC() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: BSC_CHAIN_ID }],
+                });
+                return true;
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: BSC_CHAIN_ID,
+                                chainName: 'Binance Smart Chain',
+                                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                                rpcUrls: [BSC_RPC],
+                                blockExplorerUrls: ['https://bscscan.com/']
+                            }]
+                        });
+                        return true;
+                    } catch (addError) {
+                        console.error('Error agregando BSC:', addError);
+                        return false;
+                    }
+                }
+                return false;
+            }
+        }
+
+        // Conectar billetera
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert('Por favor instala MetaMask desde https://metamask.io');
+                return;
+            }
+
+            try {
+                showLoading('Conectando billetera...');
+                
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                userAddress = accounts[0];
+                isConnected = true;
+                
+                console.log('Conectado a:', userAddress);
+                
+                // Verificar red
+                const networkInfo = await getNetworkInfo();
+                if (networkInfo && networkInfo.chainId !== 56) {
+                    const shouldSwitch = confirm('Este dashboard funciona en Binance Smart Chain. ¿Cambiar a BSC?');
+                    if (shouldSwitch) {
+                        showLoading('Cambiando a BSC...');
+                        const switched = await switchToBSC();
+                        if (switched) {
+                            await getNetworkInfo();
+                        }
+                    }
+                }
+                
+                updateConnectionStatus(true);
+                hideLoading();
+                
+                // Cargar todos los datos
+                await loadAllData();
+                
+            } catch (error) {
+                console.error('Error conectando:', error);
+                hideLoading();
+                alert(`Error conectando: ${error.message}`);
+            }
+        }
+
+        // Obtener balance BNB
+        async function getBNBBalance() {
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_getBalance',
+                        params: [userAddress, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.result) {
+                    return formatEther(data.result);
+                }
+                return '0';
+            } catch (error) {
+                console.error('Error obteniendo balance BNB:', error);
+                return '0';
+            }
+        }
+
+        // Llamada RPC para contrato
+        async function callContract(contractAddress, data) {
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{ to: contractAddress, data: data }, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const result = await response.json();
+                return result.result;
+            } catch (error) {
+                console.error('Error en llamada de contrato:', error);
+                return null;
+            }
+        }
+
+        // Obtener información del token específico desde GeckoTerminal
+        async function getTokenInfoFromGecko(geckoApi) {
+            try {
+                const response = await fetch(geckoApi);
+                const data = await response.json();
+                
+                if (data && data.data && data.data.attributes) {
+                    const tokenData = data.data.attributes;
+                    let tokenInfo = {
+                        name: tokenData.name || 'Token Personalizado',
+                        symbol: tokenData.base_token_symbol || 'CUSTOM',
+                        price: parseFloat(tokenData.base_token_price_usd) || 0
+                    };
+                    
+                    console.log('Info desde GeckoTerminal antes de override:', tokenInfo);
+                    
+                    // Aplicar overrides también a datos de GeckoTerminal
+                    tokenInfo = applyNameOverrides(tokenInfo);
+                    
+                    console.log('Info desde GeckoTerminal después de override:', tokenInfo);
+                    
+                    return tokenInfo;
+                }
+                return null;
+            } catch (error) {
+                console.error('Error obteniendo info desde GeckoTerminal:', error);
+                return null;
+            }
+        }
+
+        // Aplicar nombres personalizados
+        function applyNameOverrides(tokenInfo) {
+            const address = tokenInfo.address?.toLowerCase();
+            const symbol = tokenInfo.symbol || '';
+            const name = tokenInfo.name || '';
+            
+            console.log('Aplicando override para:', { name, symbol, address }); // Debug
+            
+            // Buscar por dirección específica
+            for (const [key, override] of Object.entries(TOKEN_NAME_OVERRIDES)) {
+                if (key.toLowerCase() === address) {
+                    console.log('Override por dirección:', override);
+                    return { ...tokenInfo, ...override };
+                }
+            }
+            
+            // Buscar por símbolo exacto (case insensitive)
+            for (const [key, override] of Object.entries(TOKEN_NAME_OVERRIDES)) {
+                if (symbol.toLowerCase() === key.toLowerCase()) {
+                    console.log('Override por símbolo exacto:', override);
+                    return { ...tokenInfo, ...override };
+                }
+            }
+            
+            // Buscar por nombre exacto (case insensitive)
+            for (const [key, override] of Object.entries(TOKEN_NAME_OVERRIDES)) {
+                if (name.toLowerCase() === key.toLowerCase()) {
+                    console.log('Override por nombre exacto:', override);
+                    return { ...tokenInfo, ...override };
+                }
+            }
+            
+            // Buscar por coincidencias parciales - XTOO casos
+            if (symbol.toUpperCase().includes('XTOO') || 
+                symbol.toUpperCase().includes('WBNB') || 
+                name.toUpperCase().includes('XTOO') || 
+                name.includes('XTOO / WBNB') ||
+                name.includes('XTOO/WBNB') ||
+                symbol === 'XTOO / WBNB' ||
+                symbol === 'XTOO/WBNB') {
+                console.log('Override por patrón XTOO');
+                return { ...tokenInfo, name: 'Xtoom', symbol: 'XTOO' };
+            }
+            
+            // Buscar por coincidencias parciales - Unknown casos
+            if (name.includes('Unknown') || 
+                name === 'Unknown Token' || 
+                symbol === 'UNK' ||
+                name === 'Unknown') {
+                console.log('Override por patrón Unknown');
+                return { ...tokenInfo, name: 'World Liberty Financial', symbol: 'WLF' };
+            }
+            
+            console.log('Sin override aplicado');
+            return tokenInfo;
+        }
+
+        // Obtener información básica del token
+        async function getBasicTokenInfo(tokenAddress) {
+            try {
+                const nameSignature = '0x06fdde03'; // name()
+                const symbolSignature = '0x95d89b41'; // symbol()
+                const decimalsSignature = '0x313ce567'; // decimals()
+                
+                const [nameResult, symbolResult, decimalsResult] = await Promise.all([
+                    callContract(tokenAddress, nameSignature),
+                    callContract(tokenAddress, symbolSignature),
+                    callContract(tokenAddress, decimalsSignature)
+                ]);
+                
+                // Decodificación simplificada
+                let name = 'Unknown Token';
+                let symbol = 'UNK';
+                let decimals = 18;
+                
+                if (decimalsResult) {
+                    decimals = hexToDecimal(decimalsResult);
+                }
+                
+                let tokenInfo = { name, symbol, decimals, address: tokenAddress };
+                
+                // Aplicar nombres personalizados
+                tokenInfo = applyNameOverrides(tokenInfo);
+                
+                return tokenInfo;
+                
+            } catch (error) {
+                console.error('Error obteniendo info básica del token:', error);
+                let tokenInfo = { name: 'Unknown Token', symbol: 'UNK', decimals: 18, address: tokenAddress };
+                return applyNameOverrides(tokenInfo);
+            }
+        }
+
+        // Obtener balance de token
+        async function getTokenBalance(tokenAddress, decimals) {
+            try {
+                const balanceSignature = '0x70a08231'; // balanceOf(address)
+                const paddedAddress = userAddress.slice(2).padStart(64, '0');
+                const balanceData = balanceSignature + paddedAddress;
+                
+                const result = await callContract(tokenAddress, balanceData);
+                
+                if (result && result !== '0x') {
+                    return formatUnits(result, decimals);
+                }
+                return '0';
+            } catch (error) {
+                console.error(`Error obteniendo balance del token ${tokenAddress}:`, error);
+                return '0';
+            }
+        }
+
+        // Obtener precios
+        async function getBNBPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=binancecoin&vs_currencies=usd`);
+                const data = await response.json();
+                return data.binancecoin?.usd || 600;
+            } catch (error) {
+                console.error('Error obteniendo precio BNB:', error);
+                return 600;
+            }
+        }
+
+        async function getADAPrice() {
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=cardano&vs_currencies=usd`);
+                const data = await response.json();
+                return data.cardano?.usd || 0.5;
+            } catch (error) {
+                console.error('Error obteniendo precio ADA:', error);
+                return 0.5;
+            }
+        }
+
+        async function getWLFPrice() {
+            // Intentar desde Binance primero
+            try {
+                const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=WLFIUSDT');
+                const data = await response.json();
+                if (data.price) {
+                    return parseFloat(data.price);
+                }
+            } catch (error) {
+                console.log('WLF no disponible en Binance, probando CoinGecko...');
+            }
+            
+            // Fallback a CoinGecko
+            try {
+                const response = await fetch(`${COINGECKO_API}/simple/price?ids=world-liberty-financial-wlfi&vs_currencies=usd`);
+                const data = await response.json();
+                return data['world-liberty-financial-wlfi']?.usd || 0;
+            } catch (error) {
+                console.error('Error obteniendo precio WLF desde CoinGecko:', error);
+                // Intentar con ID alternativo en CoinGecko
+                try {
+                    const response2 = await fetch(`${COINGECKO_API}/simple/price?ids=world-liberty-financial&vs_currencies=usd`);
+                    const data2 = await response2.json();
+                    return data2['world-liberty-financial']?.usd || 0;
+                } catch (error2) {
+                    console.error('Error obteniendo precio WLF (alternativo):', error2);
+                    return 0.02; // Precio fallback más realista
+                }
+            }
+        }
+
+        // Obtener precio según el símbolo del token
+        async function getTokenPriceBySymbol(symbol, tokenAddress) {
+            switch (symbol?.toUpperCase()) {
+                case 'WLF':
+                    return await getWLFPrice();
+                case 'ADA':
+                    return await getADAPrice();
+                case 'XTOO':
+                case 'XTOOM':
+                    return 0.001; // Precio placeholder para Xtoom
+                default:
+                    // Para el token target, usar GeckoTerminal
+                    if (tokenAddress?.toLowerCase() === SPECIFIC_TOKENS[0].address.toLowerCase()) {
+                        try {
+                            const response = await fetch(SPECIFIC_TOKENS[0].geckoApi);
+                            const data = await response.json();
+                            if (data && data.data && data.data.attributes) {
+                                return parseFloat(data.data.attributes.base_token_price_usd) || 0;
+                            }
+                        } catch (error) {
+                            console.error('Error obteniendo precio desde GeckoTerminal:', error);
+                        }
+                    }
+                    return 0.001; // Precio genérico
+            }
+        }
+
+        // Obtener lista de tokens adicionales
+        async function getAdditionalTokens() {
+            try {
+                showLoading('Escaneando tokens adicionales...');
+                
+                const url = `${BSCSCAN_API}?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=999999999&page=1&offset=50&sort=asc`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === '1' && data.result) {
+                    const uniqueTokens = new Map();
+                    
+                    data.result.forEach(tx => {
+                        if (tx.contractAddress && tx.contractAddress !== '') {
+                            const address = tx.contractAddress.toLowerCase();
+                            // Solo agregar si no está ya en los tokens específicos
+                            const isSpecific = SPECIFIC_TOKENS.some(t => t.address.toLowerCase() === address);
+                            if (!isSpecific) {
+                                let tokenInfo = {
+                                    address: tx.contractAddress,
+                                    name: tx.tokenName || 'Unknown Token',
+                                    symbol: tx.tokenSymbol || 'UNK',
+                                    decimals: parseInt(tx.tokenDecimal) || 18
+                                };
+                                
+                                // Aplicar nombres personalizados
+                                tokenInfo = applyNameOverrides(tokenInfo);
+                                
+                                uniqueTokens.set(address, tokenInfo);
+                            }
+                        }
+                    });
+                    
+                    return Array.from(uniqueTokens.values());
+                }
+                return [];
+                
+            } catch (error) {
+                console.error('Error obteniendo tokens adicionales:', error);
+                return [];
+            }
+        }
+
+        // Crear tarjeta de token/crypto
+        function createTokenCard(tokenInfo, price, type = 'token') {
+            const balance = parseFloat(tokenInfo.balance);
+            const value = balance * price;
+            
+            // Solo mostrar si tiene balance > 0 o es un token específico
+            if (balance <= 0 && !tokenInfo.isSpecific && !tokenInfo.isBNB) return '';
+            
+            let borderClass = 'border-white/10';
+            let highlightClass = '';
+            let iconClass = 'text-blue-400';
+            let badgeClass = '';
+            let badge = '';
+            
+            // Styling según el tipo
+            if (tokenInfo.isBNB) {
+                borderClass = 'border-yellow-500/50';
+                highlightClass = 'bg-yellow-500/5';
+                iconClass = 'text-yellow-400';
+                badge = '🟨 BNB Nativo';
+                badgeClass = 'text-yellow-400';
+            } else if (tokenInfo.isTarget) {
+                borderClass = 'border-green-500/50';
+                highlightClass = 'bg-green-500/5';
+                iconClass = 'text-green-400';
+                badge = '⭐ Token Principal';
+                badgeClass = 'text-green-400';
+            } else if (tokenInfo.isSpecific) {
+                borderClass = 'border-purple-500/50';
+                highlightClass = 'bg-purple-500/5';
+                iconClass = 'text-purple-400';
+                badge = '📍 Token Monitoreado';
+                badgeClass = 'text-purple-400';
+            }
+            
+            return `
+                <div class="bg-slate-800/50 ${highlightClass} rounded-2xl p-6 backdrop-blur-sm border ${borderClass} hover:border-blue-500/30 transition-all duration-300">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white">${tokenInfo.name}</h3>
+                            <p class="text-gray-400 text-sm font-mono">${tokenInfo.symbol}</p>
+                            ${badge ? `<p class="text-xs ${badgeClass}">${badge}</p>` : ''}
+                        </div>
+                        <div class="w-12 h-12 ${tokenInfo.isBNB ? 'bg-yellow-500/20' : tokenInfo.isTarget ? 'bg-green-500/20' : tokenInfo.isSpecific ? 'bg-purple-500/20' : 'bg-blue-500/20'} rounded-full flex items-center justify-center">
+                            ${tokenInfo.isBNB ? 
+                                `<svg class="w-6 h-6 ${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 3.09L12 8.18 8.91 5.09 12 2zm0 6.82l3.09 3.09L12 15 8.91 11.91 12 8.82zm0 6.18l3.09 3.09L12 22l-3.09-3.09L12 15z"/></svg>` :
+                                `<svg class="w-6 h-6 ${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.41 15.09L7 13.5l1.41-1.41L10 13.67l5.59-5.59L17 9.5l-6.41 7.59z"/></svg>`
+                            }
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Cantidad</span>
+                            <span class="text-white font-semibold">${balance.toFixed(6)} ${tokenInfo.symbol}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Precio Unitario</span>
+                            <span class="text-white font-semibold">$${price.toFixed(8)}</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                            <span class="text-gray-400">Balance Total</span>
+                            <span class="${iconClass} font-bold text-lg">$${value.toFixed(4)}</span>
+                        </div>
+                    </div>
+
+                    ${!tokenInfo.isBNB ? `
+                    <div class="mt-4 pt-4 border-t border-white/10">
+                        <p class="text-gray-500 text-xs">Contrato:</p>
+                        <p class="text-gray-400 font-mono text-xs break-all">${tokenInfo.address}</p>
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        // Cargar todos los datos
+        async function loadAllData() {
+            if (!userAddress || !isConnected) return;
+            
+            try {
+                showLoading('Obteniendo balance BNB...');
+                
+                // Obtener BNB balance y precio
+                const [bnbBalance, bnbPrice] = await Promise.all([
+                    getBNBBalance(),
+                    getBNBPrice()
+                ]);
+                
+                const bnbValue = parseFloat(bnbBalance) * bnbPrice;
+                let totalValue = bnbValue;
+                const allTokensData = [];
+                
+                // Agregar BNB como primera tarjeta
+                allTokensData.push({
+                    name: 'Binance Coin',
+                    symbol: 'BNB',
+                    balance: bnbBalance,
+                    price: bnbPrice,
+                    value: bnbValue,
+                    isBNB: true,
+                    isSpecific: true
+                });
+                
+                showLoading('Procesando tokens específicos...');
+                
+                // Procesar tokens específicos
+                for (let i = 0; i < SPECIFIC_TOKENS.length; i++) {
+                    const tokenConfig = SPECIFIC_TOKENS[i];
+                    showLoading(`Procesando token específico ${i + 1}/${SPECIFIC_TOKENS.length}...`);
+                    
+                    let tokenInfo = {
+                        address: tokenConfig.address,
+                        name: tokenConfig.name || 'Token Personalizado',
+                        symbol: tokenConfig.symbol || 'CUSTOM',
+                        decimals: 18,
+                        isSpecific: true,
+                        isTarget: tokenConfig.isTarget || false
+                    };
+                    
+                    let price = 0;
+                    
+                    // Si tiene API de GeckoTerminal, obtener datos de ahí
+                    if (tokenConfig.geckoApi) {
+                        const geckoInfo = await getTokenInfoFromGecko(tokenConfig.geckoApi);
+                        if (geckoInfo) {
+                            tokenInfo.name = geckoInfo.name;
+                            tokenInfo.symbol = geckoInfo.symbol;
+                            price = geckoInfo.price;
+                        }
+                    } else if (tokenConfig.address.toLowerCase() === '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47'.toLowerCase()) {
+                        // ADA token
+                        tokenInfo.name = 'Cardano';
+                        tokenInfo.symbol = 'ADA';
+                        price = await getADAPrice();
+                    } else {
+                        // Token genérico
+                        const basicInfo = await getBasicTokenInfo(tokenConfig.address);
+                        tokenInfo.name = basicInfo.name;
+                        tokenInfo.symbol = basicInfo.symbol;
+                        tokenInfo.decimals = basicInfo.decimals;
+                        
+                        // Obtener precio según el símbolo
+                        price = await getTokenPriceBySymbol(tokenInfo.symbol, tokenConfig.address);
+                    }
+                    
+                    // Obtener balance
+                    const balance = await getTokenBalance(tokenConfig.address, tokenInfo.decimals);
+                    const value = parseFloat(balance) * price;
+                    
+                    tokenInfo.balance = balance;
+                    tokenInfo.price = price;
+                    tokenInfo.value = value;
+                    
+                    allTokensData.push(tokenInfo);
+                    totalValue += value;
+                }
+                
+                // Obtener tokens adicionales
+                const additionalTokens = await getAdditionalTokens();
+                
+                showLoading('Procesando tokens adicionales...');
+                
+                for (let i = 0; i < additionalTokens.length; i++) {
+                    const token = additionalTokens[i];
+                    showLoading(`Procesando token adicional ${i + 1}/${additionalTokens.length}...`);
+                    
+                    const balance = await getTokenBalance(token.address, token.decimals);
+                    const balanceNum = parseFloat(balance);
+                    
+                    // Solo incluir si tiene balance
+                    if (balanceNum > 0) {
+                        const price = await getTokenPriceBySymbol(token.symbol, token.address);
+                        const value = balanceNum * price;
+                        
+                        allTokensData.push({
+                            ...token,
+                            balance,
+                            price,
+                            value,
+                            isSpecific: false
+                        });
+                        
+                        totalValue += value;
+                    }
+                }
+                
+                // Ordenar: BNB primero, luego específicos, luego por valor
+                allTokensData.sort((a, b) => {
+                    if (a.isBNB) return -1;
+                    if (b.isBNB) return 1;
+                    if (a.isTarget) return -1;
+                    if (b.isTarget) return 1;
+                    if (a.isSpecific && !b.isSpecific) return -1;
+                    if (b.isSpecific && !a.isSpecific) return 1;
+                    return b.value - a.value;
+                });
+                
+                // Actualizar UI
+                document.getElementById('totalBalance').textContent = `$${totalValue.toFixed(2)}`;
+                document.getElementById('tokenCount').textContent = allTokensData.length;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+                
+                // Crear tarjetas
+                const tokensGrid = document.getElementById('tokensGrid');
+                tokensGrid.innerHTML = allTokensData
+                    .map(token => createTokenCard(token, token.price))
+                    .join('');
+                
+                hideLoading();
+                
+                console.log('Datos cargados:', {
+                    totalTokens: allTokensData.length,
+                    totalValue: `$${totalValue.toFixed(2)}`,
+                    breakdown: allTokensData.map(t => `${t.symbol}: $${t.value.toFixed(4)}`)
+                });
+                
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                hideLoading();
+                alert('Error cargando datos. Algunos servicios pueden estar temporalmente no disponibles.');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('connectButton').addEventListener('click', connectWallet);
+
+        // Eventos de MetaMask
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    userAddress = null;
+                    isConnected = false;
+                    updateConnectionStatus(false);
+                } else {
+                    userAddress = accounts[0];
+                    if (isConnected) {
+                        updateConnectionStatus(true);
+                        loadAllData();
+                    }
+                }
+            });
+
+            window.ethereum.on('chainChanged', () => {
+                window.location.reload();
+            });
+        }
+
+        // Inicialización
+        window.addEventListener('load', async () => {
+            console.log('Inicializando dashboard final...');
+            
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        userAddress = accounts[0];
+                        isConnected = true;
+                        
+                        await getNetworkInfo();
+                        updateConnectionStatus(true);
+                        await loadAllData();
+                    }
+                } catch (error) {
+                    console.error('Error verificando conexión existente:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
