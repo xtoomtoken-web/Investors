@@ -146,15 +146,17 @@
                         </svg>
                     </div>
                 </div>
-                <div id="currentXtooBalance" class="text-4xl font-bold text-purple-400 mb-2">0 XTOO</div>
+                <div id="currentBalanceUSD" class="text-4xl font-bold text-purple-400 mb-2">$0.00</div>
                 <div class="text-sm text-gray-400 mb-4">
-                    <span>USD Equivalent: </span>
-                    <span id="currentBalanceUSD" class="font-semibold text-purple-300">$0.00</span>
+                    <span>XTOO Tokens: </span>
+                    <span id="currentXtooBalance" class="font-semibold text-purple-300">0 XTOO</span>
                 </div>
                 
                 <!-- Buy/Sell Button -->
                 <button id="buySellBtnInCard" class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg">
-                    <span>💰</span>
+                    <svg class="w-5 h-5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                    </svg>
                     <span>Buy / Sell XTOO</span>
                 </button>
             </div>
@@ -1150,11 +1152,12 @@
                 });
                 const currentBalanceUSD = (currentXtooBalance * xtooPrice);
                 
-                currentBalanceElement.textContent = `${currentBalanceFormatted} XTOO`;
+                // Intercambiados: USD arriba (grande), XTOO abajo (pequeño)
                 currentBalanceUSDElement.textContent = `$${currentBalanceUSD.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })}`;
+                currentBalanceElement.textContent = `${currentBalanceFormatted} XTOO`;
                 
                 // Total historical received - USD en grande, XTOO abajo
                 const totalHistoricalFormatted = parseFloat(totalHistoricalXtoo).toLocaleString('en-US', {
