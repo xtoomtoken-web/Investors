@@ -1322,6 +1322,25 @@
 
 
 
+        // Test function to verify account switching
+        window.testAccountSwitch = function() {
+            console.log('🧪 Testing account switch functionality');
+            console.log('Current state:', {
+                userAddress: userAddress,
+                isConnected: isConnected,
+                hasMetaMask: typeof window.ethereum !== 'undefined',
+                accountsChangedListeners: window.ethereum?._events?.accountsChanged?.length || 0
+            });
+            
+            if (typeof window.ethereum !== 'undefined') {
+                console.log('✅ MetaMask detected');
+                console.log('Event listeners:', window.ethereum.listenerCount ? 
+                    window.ethereum.listenerCount('accountsChanged') : 'Unknown');
+            } else {
+                console.log('❌ MetaMask not found');
+            }
+        };
+
         // Debug function to test database operations
         window.debugInvestorData = async function() {
             console.log('🔍 DEBUG: Current investor data state');
@@ -1561,40 +1580,38 @@
             // Show loading during switch
             showLoading('Switching to new wallet...');
             
-            // Reset all data
-            userAddress = null;
-            isConnected = false;
-            currentUserData = null;
-            xtoomCurrentValue = 0;
-            xtoomBalance = 0;
-            totalHistoricalXtoo = 0;
-            
-            // Clear API cache to force fresh data
-            apiCache.clear();
-            console.log('🧹 API cache cleared for account switch');
-            
-            // Small delay to ensure MetaMask has switched
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
             try {
-                // Reconnect with new address
+                // Clear API cache to force fresh data
+                apiCache.clear();
+                console.log('🧹 API cache cleared for account switch');
+                
+                // Update address immediately
                 userAddress = newAddress;
                 isConnected = true;
                 
                 console.log('🎯 New address set:', userAddress);
                 
-                // Update connection status first
+                // Reset all data variables
+                currentUserData = null;
+                xtoomCurrentValue = 0;
+                xtoomBalance = 0;
+                totalHistoricalXtoo = 0;
+                
+                // Update connection status
                 updateConnectionStatus(true);
                 
                 // Load user data for new account
+                console.log('📖 Loading data for new address...');
                 currentUserData = await getInvestorData(userAddress);
                 
                 if (currentUserData === null) {
                     // New user - show first time modal
+                    hideLoading();
                     showFirstTimeModal();
                     return;
                 } else {
                     // Existing user - update UI and load portfolio
+                    console.log('👤 Existing user found, loading portfolio...');
                     updateInvestorInfoDisplay(currentUserData);
                     await loadAllData();
                 }
@@ -1605,7 +1622,13 @@
             } catch (error) {
                 console.error('❌ Error during account switch:', error);
                 hideLoading();
-                alert('Error loading new wallet data. Please try refreshing the page.');
+                
+                // Reset to disconnected state on error
+                userAddress = null;
+                isConnected = false;
+                updateConnectionStatus(false);
+                
+                alert('Error loading new wallet data. Please try connecting again.');
             }
         }
 
@@ -3113,14 +3136,25 @@
             // Handle MetaMask events
             if (typeof window.ethereum !== 'undefined') {
                 window.ethereum.on('accountsChanged', function(accounts) {
-                    console.log('🔄 Account changed detected:', accounts);
+                    console.log('🔄 Account changed detected:', {
+                        accounts: accounts,
+                        currentUserAddress: userAddress,
+                        accountsLength: accounts.length
+                    });
+                    
                     if (accounts.length === 0) {
                         // Wallet disconnected
+                        console.log('🔌 Wallet disconnected');
                         handleWalletDisconnect();
                     } else if (accounts[0] !== userAddress) {
                         // Different account selected
-                        console.log('🔁 Switching from', userAddress, 'to', accounts[0]);
+                        console.log('🔁 Switching accounts:', {
+                            from: userAddress,
+                            to: accounts[0]
+                        });
                         handleAccountSwitch(accounts[0]);
+                    } else {
+                        console.log('ℹ️ Same account, no action needed');
                     }
                 });
 
