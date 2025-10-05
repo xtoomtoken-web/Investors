@@ -181,11 +181,11 @@
                 </div>
                 
                 <!-- XTOO History Button -->
-                <button id="historyBtnInCard" class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg">
+                <button id="historyBtnInCard" class="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg cursor-not-allowed opacity-75" disabled>
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
-                    <span>XTOO History</span>
+                    <span>History (API Issues)</span>
                 </button>
             </div>
         </div>
@@ -514,8 +514,8 @@
         // SUPABASE CONFIGURATION
         // ================================
         // ✅ CONFIGURADO: Credenciales reales de Supabase
-        const SUPABASE_URL = 'https://slowkvbzjopnsgiwfdvs.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsb3drdmJ6am9wbnNnaXdmZHZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MTk5ODQsImV4cCI6MjA3NDM5NTk4NH0.phvZ282_EGIbrAv54bigNPH9eIw4qZmC1Fa0y9Q-_d4';
+        const SUPABASE_URL = 'https://trwddrhdgdvtejkukgqw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyd2RkcmhkZ2R2dGVqa3VrZ3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2ODE3ODcsImV4cCI6MjA3NTI1Nzc4N30.B_MS8EG8y42tOERPU-352X_R9RHK2BsmPjS8O8T8QMo';
         
         let supabase = null;
         let isCloudConnected = false;

@@ -5,12 +5,27 @@ This is an advanced Web3 wallet dashboard for cryptocurrency investors with ROI/
 
 ## Current Status: Production Ready & Enhanced ✅
 - **Live URL**: `https://xtoomtoken-web.github.io/Investors/dashboard_investor_cloud.html`
+- **Repository**: `https://github.com/xtoomtoken-web/Investors`
 - **Main File**: `dashboard_investor_cloud.html` (cloud database version)
 - **Backup File**: `dashboard_local.html` (localStorage fallback)
 - **Cloud Database**: Supabase PostgreSQL (fully configured)
 - **Deployment**: GitHub Pages (active and tested)
 - **Mobile Optimized**: Responsive design verified
 - **Performance Enhancement**: API Cache System implemented ⚡
+- **Multi-Wallet Support**: Smart wallet switching without page reloads ⭐
+
+## Critical Bug Fixes Implemented
+
+### 🔧 **Hardcoded Wallet Address Bug (FIXED)**
+- **Problem**: Dashboard was using hardcoded address `0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2`
+- **Solution**: Now uses actual connected wallet address `userAddress = accounts[0]`
+- **Impact**: Dashboard now works with any wallet, not just the hardcoded one
+
+### 🔄 **Wallet Switching Enhancement**
+- **Before**: Used `location.reload()` causing poor UX
+- **After**: Implemented `handleAccountSwitch()` for seamless transitions
+- **Features**: Loading states, cache clearing, data persistence
+- **Event Handling**: MetaMask `accountsChanged` event properly managed
 
 ## Core Architecture Patterns
 
@@ -19,253 +34,180 @@ This is an advanced Web3 wallet dashboard for cryptocurrency investors with ROI/
 - **Sync Strategy**: Cloud-first with localStorage fallback
 - **User Recognition**: Wallet address-based identification
 - **Multi-device Access**: Seamless sync across all devices
-- **Credentials**: Configured and working in production
+- **Data Verification**: Automatic verification after save operations
+- **Enhanced Logging**: Detailed operation logs for debugging
 
 ### ⚡ API Cache System - PERFORMANCE ENHANCEMENT
 - **Implementation**: Smart caching with TTL (Time To Live) management
+- **Cache Clearing**: Automatic cache invalidation on wallet switches
 - **Cache Types**: Different TTL for different data types
   - Token Prices: 2 minutes TTL
   - Token Balances: 3 minutes TTL
   - Contract Calls: 5 minutes TTL
   - Transaction History: 10 minutes TTL
   - User Data: 15 minutes TTL
-- **Features**: 
-  - Fallback to expired cache on API failures
-  - Ctrl+Click refresh button to clear cache
-  - Cache statistics for debugging
-  - 95%+ performance improvement for repeat calls
 
-### 📊 ROI/APY Calculation System - CORRECTED FORMULAS
+### 🔄 **Multi-Wallet Management System**
 
-#### **ROI Calculation** (Value Ratio Method)
+#### **Wallet Connection Functions:**
+- `handleAccountSwitch(newAddress)`: Seamless account switching
+- `handleWalletDisconnect()`: Clean state reset on disconnect
+- `updateConnectionStatus(connected)`: UI state management
+
+#### **Event Handling Pattern:**
 ```javascript
-ROI = (currentTotalValue / initialInvestment) × 100
+window.ethereum.on('accountsChanged', function(accounts) {
+    if (accounts.length === 0) {
+        handleWalletDisconnect();
+    } else if (accounts[0] !== userAddress) {
+        handleAccountSwitch(accounts[0]);
+    }
+});
 ```
-- **Key Change**: Uses VALUE RATIO instead of traditional ROI
-- **Interpretation**: 
-  - 100% = Break-even (current value = initial investment)
-  - >100% = Profit (investment worth more than original)
-  - <100% = Loss (investment worth less than original)
-- **Always Positive**: Eliminates confusion with negative percentages
 
-#### **APY Calculation** (Compound Annual Growth Rate)
-```javascript
-APY = (currentValue / initialInvestment)^(365/daysPassed) - 1
-```
-- **Mathematically Correct**: Uses proper compound growth formula
-- **Safeguards**: Conservative projection for periods <7 days
-- **Validation**: Checks for division by zero and negative values
+### 💾 **Enhanced Database Operations**
 
-#### **CRITICAL: Current Value Definition**
+#### **Save Pattern with Verification:**
 ```javascript
-currentTotalValue = totalHistoricalXtoo × currentXtooPrice
-```
-- **NOT current wallet balance** - this would be incorrect
-- **MUST BE total XTOO received throughout history** × current price
-- **Rationale**: ROI should reflect total return on investment, not just current holdings
-
-### 🏆 Investor Level System
-```javascript
-INVESTOR_LEVELS = {
-    FAN: { min: 0, max: 2499, name: 'Fan Investor', emoji: '🌟' },
-    PRO: { min: 2500, max: 4999, name: 'Pro Investor', emoji: '⚡' }, 
-    VIP: { min: 5000, max: Infinity, name: 'VIP Investor', emoji: '👑' }
+async function saveInvestorData(walletAddress, userData) {
+    // 1. Save to Supabase with detailed logging
+    // 2. Verify save operation immediately
+    // 3. Fallback to localStorage if cloud fails
+    // 4. Update UI status indicators
 }
 ```
-- **Benefits**: Pro = Enhanced crypto opportunities, VIP = ADA dividend eligibility
-- **Visual**: Animated progress bars with color-coded levels
-- **Status Messages**: Context-aware annotations for each level
 
-### 💰 ADA Dividend Tracker System
-- **Contract**: Monitors XTOO balance at `0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a`
-- **Trigger**: 1,000 XTOO in contract → dividend distribution
-- **Eligibility**: Requires 5,000+ XTOO to receive ADA dividends
-- **Progress Tracking**: Real-time bar showing 0-1000 XTOO progress
-- **User Status**: Shows eligibility based on user's XTOO holdings
+#### **Data Reload After Edit:**
+```javascript
+// CRITICAL: Always reload from database after edits
+await saveInvestorData(userAddress, currentUserData);
+const reloadedData = await getInvestorData(userAddress);
+currentUserData = reloadedData; // Use verified data
+```
+
+## Design System - Unified 3-Color Scheme
+
+### 🎨 **Color Consistency (CRITICAL)**
+- **Blue (Blue)**: ROI Card + Investor Level Panel
+- **Purple (Purple)**: Current XTOO Balance + Total XTOO Received  
+- **Cyan**: APY Card + ADA Dividend Tracker + View Chart Button
+
+### 🖼️ **Icon System - Line SVG Only**
+- **NO EMOJIS**: All emojis replaced with Line SVG icons
+- **Color Matching**: Icons use their parent card's color scheme
+- **Consistent Sizing**: w-6 h-6 for inline, w-8 h-8 for accent icons
+
+### 📱 **Button Integration Pattern**
+- **Buy/Sell Button**: Integrated within Current XTOO Balance card
+- **History Button**: Integrated within Total XTOO Received card  
+- **Central Actions**: Only View Chart button remains in action area
+- **Color Coordination**: Buttons match their parent card colors
+
+## ROI/APY Calculation System - CORRECTED
+
+### 📊 **ROI Display Pattern**
+- **Main Value**: ROI percentage (value ratio method)
+- **Secondary Info**: "Profit/Loss: $X.XX" (shows USD value of Total XTOO Received)
+- **Formula**: `(currentTotalValue / initialInvestment) × 100`
+- **Interpretation**: >100% = profit, <100% = loss
+
+### 📈 **APY Calculation - SIMPLIFIED**
+- **Formula**: `APY = (ROI ÷ days elapsed) × 365`
+- **Display**: Shows investment period in days
+- **Method Description**: "Formula: (ROI ÷ days) × 365"
+
+### 💰 **Balance Card Layout (CORRECTED)**
+#### **Current XTOO Balance Card:**
+- **Top (Large)**: USD equivalent value
+- **Bottom (Small)**: "XTOO Tokens: X.XX XTOO"
+- **Button**: Buy/Sell with purple gradient
+
+#### **Total XTOO Received Card:**
+- **Top (Large)**: USD equivalent of total received
+- **Bottom (Small)**: "XTOO Tokens: X.XX XTOO"  
+- **Button**: History with purple gradient (matching Current Balance)
 
 ## Token Configuration (Updated)
 
 ### Monitored Tokens List
 1. **XTOO (Target Token)**: `0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a`
-   - Role: ROI tracking, investor levels, dividend eligibility
-   - Price: GeckoTerminal API (real-time)
-   - Badge: "⭐ Principal Token (ROI Tracking)"
-
-2. **ADA (Cardano)**: `0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47`
-   - Role: Dividend payment token
-   - Price: CoinGecko API (cardano)
-   - Badge: "🔸 Cardano Token"
-
+2. **ADA (Cardano)**: `0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D37`
 3. **WLF**: `0x47474747477b199288bF72a1D702f7Fe0Fb1DEeA`
-   - Price: Binance API (WLFIUSDT) with CoinGecko fallback
-   - Badge: "📍 World Liberty Financial"
-
 4. **XRP**: `0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE`
-   - Price: CoinGecko API (ripple)
-   - Badge: "💎 XRP Token"
-
 5. **BNB**: Native token (always first)
-   - Price: CoinGecko API (binancecoin)
-   - Badge: "🟨 Native Coin"
 
-### Token Override System
-```javascript
-TOKEN_NAME_OVERRIDES = {
-    'Unknown Token': { name: 'World Liberty Financial', symbol: 'WLF' },
-    'Unknown': { name: 'World Liberty Financial', symbol: 'WLF' }
-}
-```
+## Development & Debugging Patterns
 
-## UI/UX Design Patterns - Production Ready
+### 🔍 **Debug Functions (Available in Console):**
+- `debugInvestorData()`: Compares current vs fresh database data
+- `testAccountSwitch()`: Verifies wallet switching functionality
+- `diagnoseROICalculation()`: Checks ROI calculation values
+- `apiCache.getStats()`: Shows cache performance metrics
 
-### XTOO Balance Cards Display Format
-- **Current XTOO Balance**: XTOO amount in large text, USD equivalent below
-- **Total XTOO Received**: **USD equivalent in large text, XTOO amount below**
-  - This emphasizes the investment value over token quantity
-  - Uses: `totalHistoricalXtoo × currentXtooPrice` for USD calculation
+### 📝 **Logging Conventions:**
+- Use emoji prefixes: 🔄 (processing), ✅ (success), ❌ (error)
+- Include detailed object logging for complex operations
+- Always log wallet switches and database operations
+- Verification logs after save operations
 
-### ROI/APY Cards Behavior
-- **Colors**:
-  - Green (📈): ROI > 100% (profit)
-  - Yellow (📊): ROI 50-100% (partial loss but recovering)
-  - Red (📉): ROI < 50% (significant loss)
-- **Descriptions**: 
-  - ROI: "Value ratio: Current XTOO value vs initial investment"
-  - APY: "Annualized return on total XTOO received"
+### 🧪 **Testing Patterns:**
+- **Wallet Switching**: Test account changes in MetaMask
+- **Data Persistence**: Edit info, reload page, verify changes persist
+- **Multi-device**: Same wallet on different devices should sync
+- **Error Handling**: Test with network issues, database failures
 
-### Color-Coded System
-- **Investor Level Panel**: Blue/Yellow/Purple (matches levels)
-- **ADA Dividend Tracker**: Emerald/Green with progress states
-- **ROI Card**: Green/Yellow/Red based on value ratio thresholds
-- **APY Card**: Blue with calculation method display
-- **Token Cards**: Unique gradient for each token type
+## Security & Error Handling
 
-### Responsive Grid System
-- **Mobile**: Single column stack (< 640px)
-- **Tablet**: 2 columns (640px - 768px)
-- **Desktop**: 4 columns for tokens, 2 for progress bars (768px+)
-- **Action Buttons**: Stack on mobile, side-by-side on desktop
+### 🔐 **Security Principles:**
+- No private keys handled (read-only operations)
+- Public data only (wallet addresses, investment amounts, dates)
+- Client-side processing only
+- Row Level Security (RLS) enabled on Supabase
 
-### Progress Bar Design
-- **Height**: 32px (h-8) for better visibility
-- **Border Radius**: Minimal (`rounded`) not fully rounded
-- **Animation**: 1-second smooth transitions
-- **States**: Dark gray (no balance) → Colored gradients (with balance)
-
-## Trading Integration
-
-### Buy/Sell Integration
-- **Platform**: Matcha.xyz DEX
-- **URL**: `https://matcha.xyz/tokens/bsc/0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a`
-- **Implementation**: Opens in new window (1200x800 popup)
-- **Button**: Blue gradient, full-width on mobile
-
-### Chart Integration  
-- **Platform**: GeckoTerminal
-- **URL**: `https://www.geckoterminal.com/bsc/pools/0x934a02c24699598daef464cd0fbc81c57f262fa0`
-- **Implementation**: Modal with responsive iframe
-- **Features**: Full-screen chart, mobile-optimized, close on outside click
-
-## Development Patterns & Conventions
-
-### Function Naming & Organization
-- **ROI/APY Functions**: Always pass `totalHistoricalXtoo`, not current balance
-- **Price Functions**: Use cached fetch with 'token_prices' cache type
-- **Balance Functions**: Use cached fetch with 'token_balances' cache type
-- **Debug Functions**: Always include comprehensive logging for complex calculations
-
-### Cache Integration Pattern
-```javascript
-// Always use cachedFetch instead of raw fetch
-const data = await cachedFetch(url, options, cacheType);
-```
-- **Cache Types**: Use appropriate cache type for TTL management
-- **Fallbacks**: Cached functions should handle failures gracefully
-- **Debug**: Include cache hit/miss logging in development
-
-### ROI/APY Update Pattern
-```javascript
-function updateROIAPYDisplay(totalHistoricalXtoo, xtooPrice, userData) {
-    const currentTotalValue = totalHistoricalXtoo * xtooPrice;
-    const roi = calculateROI(currentTotalValue, initialInvestment);
-    const apy = calculateAPY(currentTotalValue, initialInvestment, daysPassed);
-}
-```
-- **NEVER use current wallet balance for ROI calculation**
-- **ALWAYS use total historical XTOO received**
-- **ALWAYS validate price availability before calculation**
-
-### Debugging & Diagnostics
-- **Global Debug Function**: `diagnoseROICalculation()` available in console
-- **Comprehensive Logging**: All major calculations should log intermediate values
-- **User-Friendly Errors**: Graceful degradation with meaningful error messages
+### 🚨 **Error Handling Patterns:**
+- **Database Errors**: Automatic fallback to localStorage
+- **Network Issues**: Show cached data with warnings
+- **Wallet Errors**: Clear error messages with recovery options
+- **API Failures**: Graceful degradation with user feedback
 
 ## File Structure (Production)
 ```
-📁 Repository/
-├── 🌟 index.html (auto-redirect with loading spinner)
-├── 🚀 dashboard_investor_cloud.html (MAIN - cloud database + cache system)
-├── 💾 dashboard_local.html (backup - localStorage only) 
-├── 📖 SUPABASE_SETUP.md (complete database setup guide)
+📁 Repository: xtoomtoken-web/Investors
+├── 🌟 index.html (auto-redirect)
+├── 🚀 dashboard_investor_cloud.html (MAIN - cloud + multi-wallet)
+├── 💾 dashboard_local.html (backup - localStorage only)
+├── 📖 SUPABASE_SETUP.md (database setup guide)
 ├── 🔧 simple_server.ps1 (local development server)
 ├── 📝 README.md (comprehensive documentation)
-├── 📋 CACHE_SYSTEM_IMPLEMENTATION.md (performance enhancement docs)
-└── 🧪 test_cache_system.html (cache testing page)
+├── 📋 Design summaries and changelogs
+└── 🧪 Test files for development
 ```
-
-## Database Schema (Supabase)
-```sql
-Table: public.investors
-- id: SERIAL PRIMARY KEY
-- wallet_address: TEXT UNIQUE NOT NULL
-- name: TEXT NOT NULL  
-- initial_investment: NUMERIC NOT NULL
-- initial_date: DATE NOT NULL
-- created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-- updated_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-```
-
-## Security Considerations - Production Ready
-- ✅ **Read-only Operations**: No private keys handled
-- ✅ **Public Data Only**: Wallet addresses, investment amounts, dates
-- ✅ **HTTPS Deployment**: GitHub Pages provides SSL
-- ✅ **Client-side Processing**: All calculations in browser
-- ✅ **Supabase RLS**: Row Level Security enabled with public policies
-- ✅ **API Cache Security**: No sensitive data cached, TTL prevents stale security info
 
 ## Performance Optimizations
 - ✅ **API Response Caching**: 95%+ improvement for repeat calls
+- ✅ **Smart Cache Invalidation**: Clears on wallet switches
 - ✅ **Lazy Loading**: Heavy components load only when needed
 - ✅ **Efficient APIs**: Parallel API calls where possible
-- ✅ **Smart Cache Invalidation**: Ctrl+Click refresh for fresh data
 - ✅ **Minimal Dependencies**: Vanilla JS + Tailwind CSS only
 
-## Mobile Optimization Patterns
-- **Header**: Stacked on mobile, horizontal on desktop
-- **Connection Panel**: Vertical buttons on mobile, horizontal on desktop  
-- **Progress Bars**: Full-width containers with responsive internal elements
-- **Modals**: Reduced padding, optimized heights for mobile viewports
-- **Touch Targets**: Minimum 44px tap areas for all interactive elements
-- **Balance Cards**: Stack vertically on mobile, side-by-side on desktop
-
-## Error Handling & Fallbacks
-- **API Failures**: Fallback to cached data (even if expired)
-- **Database Failures**: Automatic localStorage fallback
-- **Network Issues**: Graceful degradation with user feedback
-- **MetaMask Issues**: Clear error messages and troubleshooting
-- **Calculation Errors**: Validation and fallback to safe defaults
-
-## Key Project Principles
-1. **Simplicity First**: Keep core functionality focused and clean
-2. **Performance Matters**: Use caching and optimization where it makes sense
-3. **User-Centric**: Calculations should make intuitive sense to investors
-4. **Transparent**: Provide debugging tools and clear explanations
-5. **Reliable**: Multiple fallbacks and error handling
-6. **Mobile-First**: Responsive design is not optional
-7. **Data Integrity**: ROI calculations must use correct historical data
+## Key Project Principles (UPDATED)
+1. **Multi-Wallet First**: Support seamless wallet switching
+2. **Data Integrity**: Always verify saves with database reloads
+3. **User-Centric Design**: Calculations should make intuitive sense
+4. **Performance Matters**: Smart caching and optimization
+5. **Visual Consistency**: 3-color system with Line icons only
+6. **Robust Error Handling**: Multiple fallbacks and clear feedback
+7. **Mobile-First**: Responsive design is mandatory
+8. **Debug-Friendly**: Comprehensive logging and console tools
 
 ## Console Commands for Development/Debugging
 ```javascript
+// Test wallet switching functionality
+testAccountSwitch()
+
+// Debug data synchronization
+debugInvestorData()
+
 // Check cache performance
 apiCache.getStats()
 
@@ -278,3 +220,10 @@ diagnoseROICalculation()
 // Force refresh with cache clear
 handleRefreshClick({ctrlKey: true})
 ```
+
+## Deployment & Updates
+- **GitHub Repository**: `xtoomtoken-web/Investors`
+- **Live URL**: Auto-deploys from main branch
+- **Update Process**: git add, commit, push to main
+- **Authentication**: Uses GitHub Personal Access Token
+- **Verification**: Always test locally before pushing
