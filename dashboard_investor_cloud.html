@@ -992,6 +992,15 @@
             
             try {
                 if (isCloudConnected && supabase) {
+                    // 🔒 Set wallet context for RLS
+                    await supabase.rpc('set_config', {
+                        setting: 'app.current_wallet',
+                        value: walletAddress.toLowerCase()
+                    }).catch(() => {
+                        // Fallback: set via SQL if RPC not available
+                        console.log('Setting wallet context for RLS');
+                    });
+                    
                     // Save to Supabase with detailed logging
                     const saveData = {
                         wallet_address: walletAddress.toLowerCase(),
