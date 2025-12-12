@@ -1135,9 +1135,9 @@
         // ================================
         // XTOO BALANCE AND HISTORICAL CALCULATIONS
         function updateDashboardBalanceCards() {
-            // Get current XTOO balance and price from the existing variables
-            let currentBalance = 0;
-            let xtooPrice = 0;
+            // Get current XTOO balance and price from the GLOBAL variables
+            let currentBalance = xtoomBalance || 0; // Use global xtoomBalance
+            let xtooPrice = xtoomPrice || 0; // Use global xtoomPrice
             
             // Try to get current balance from the tokens displayed
             try {
@@ -1164,21 +1164,12 @@
                 console.log('Could not extract XTOO data from cards, using globals');
             }
             
-            // Use global variables if available
-            if (window.xtoomBalance !== undefined) currentBalance = window.xtoomBalance;
-            if (window.xtoomPrice !== undefined) xtooPrice = window.xtoomPrice;
-            
-            // Also try the global xtoomPrice variable
-            if (xtooPrice === 0 && window.xtoomPrice) {
-                xtooPrice = window.xtoomPrice;
-            }
-            
             console.log('Updating dashboard cards with:', { 
                 currentBalance, 
                 xtooPrice, 
                 totalHistoricalXtoo,
-                globalXtoomPrice: window.xtoomPrice,
-                xtoomPrice: window.xtoomPrice
+                globalXtoomBalance: xtoomBalance,
+                globalXtoomPrice: xtoomPrice
             });
             updateXtooBalanceCards(currentBalance, xtooPrice, totalHistoricalXtoo);
         }
@@ -2134,24 +2125,24 @@
                     console.log('✅ Background XTOO history loaded:', incomingTransfers.length, 'IN transactions, total:', totalHistoricalXtoo);
                     
                     // IMPORTANTE: Actualizar la UI después de cargar el historial
-                    // Usar variables globales
-                    const currentXtooPrice = xtoomPrice || 0;
-                    const currentXtooBalance = xtoomBalance || 0;
-                    
-                    console.log('🔄 Updating UI with historical data...');
-                    console.log('  - Current Balance:', currentXtooBalance, 'XTOO');
-                    console.log('  - Current Price: $', currentXtooPrice);
+                    // NO actualizar aquí - se actualizará cuando el precio esté disponible
+                    // La función updateDashboardDisplay() ya maneja esto correctamente
+                    console.log('✅ Background XTOO history loaded - UI will update when price is available');
                     console.log('  - Total Historical:', totalHistoricalXtoo, 'XTOO');
                     
-                    if (currentXtooPrice > 0 && currentXtooBalance >= 0) {
-                        updateXtooBalanceCards(currentXtooBalance, currentXtooPrice, totalHistoricalXtoo);
+                    // Si el precio ya está disponible, actualizar ahora
+                    if (xtoomPrice > 0 && xtoomBalance >= 0) {
+                        console.log('🔄 Price available, updating UI immediately...');
+                        console.log('  - Current Balance:', xtoomBalance, 'XTOO');
+                        console.log('  - Current Price: $', xtoomPrice);
+                        updateXtooBalanceCards(xtoomBalance, xtoomPrice, totalHistoricalXtoo);
                         
                         // Update ROI if we have user data
                         if (currentUserData && totalHistoricalXtoo > 0) {
-                            updateROIAPYDisplay(totalHistoricalXtoo, currentXtooPrice, currentUserData);
+                            updateROIAPYDisplay(totalHistoricalXtoo, xtoomPrice, currentUserData);
                         }
                     } else {
-                        console.warn('⚠️ Waiting for price/balance data to update UI');
+                        console.log('⏳ Waiting for price data - UI will update automatically');
                     }
                 } else {
                     console.log('⚠️ No transfers found in Ankr response');
