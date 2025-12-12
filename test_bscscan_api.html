@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSCScan API Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-white mb-8 text-center">🔍 BSCScan API Tester</h1>
+        
+        <!-- Input -->
+        <div class="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">Test Configuration</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Wallet Address</label>
+                    <input 
+                        type="text" 
+                        id="walletAddress" 
+                        value="0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                        placeholder="0x..."
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">XTOO Contract Address</label>
+                    <input 
+                        type="text" 
+                        id="contractAddress" 
+                        value="0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                        placeholder="0x..."
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">BSCScan API Key</label>
+                    <input 
+                        type="text" 
+                        id="apiKey" 
+                        value="1SBKZNRWAU5MS3Q2VQXFMUZWMGKJRSGF5M"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                        placeholder="Your API Key"
+                    >
+                </div>
+                
+                <button onclick="testAPI()" class="w-full bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-xl font-semibold transition-colors">
+                    🚀 Test BSCScan API
+                </button>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="mb-6 p-4 rounded-xl border border-gray-600 bg-gray-800">
+            <div class="flex items-center space-x-2">
+                <div id="statusIcon">📋</div>
+                <span id="statusText">Ready to test API...</span>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="bg-gray-800 rounded-xl p-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">API Results</h2>
+            <div id="resultContent" class="text-gray-300">
+                Click "Test BSCScan API" to start
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BSCSCAN_API = 'https://api.bscscan.com/api';
+
+        function updateStatus(icon, text, type = 'info') {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusText').textContent = text;
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `mb-6 p-4 rounded-xl border ${
+                type === 'success' ? 'border-green-500 bg-green-900/20' :
+                type === 'error' ? 'border-red-500 bg-red-900/20' :
+                type === 'warning' ? 'border-yellow-500 bg-yellow-900/20' :
+                'border-gray-600 bg-gray-800'
+            }`;
+        }
+
+        function updateResults(html) {
+            document.getElementById('resultContent').innerHTML = html;
+        }
+
+        async function testAPI() {
+            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const contractAddress = document.getElementById('contractAddress').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!walletAddress || !contractAddress || !apiKey) {
+                updateStatus('⚠️', 'Please fill all fields', 'warning');
+                return;
+            }
+
+            updateStatus('🔄', 'Testing BSCScan API...', 'info');
+            updateResults('<div class="text-gray-400">Testing API connection...</div>');
+
+            // Construct API URL
+            const apiUrl = `${BSCSCAN_API}?module=account&action=tokentx&contractaddress=${contractAddress}&address=${walletAddress}&page=1&offset=100&sort=desc&apikey=${apiKey}`;
+
+            console.log('🌐 Testing API URL:', apiUrl);
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(apiUrl);
+                const endTime = performance.now();
+                const duration = (endTime - startTime).toFixed(0);
+
+                console.log('📡 Response status:', response.status);
+                console.log('⏱️ Request duration:', duration + 'ms');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('📊 Response data:', data);
+
+                // Analyze response
+                if (data.status === '1' && data.result && Array.isArray(data.result)) {
+                    const transactions = data.result;
+                    const incomingTxs = transactions.filter(tx => 
+                        tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase()
+                    );
+
+                    updateStatus('✅', `Success! Found ${transactions.length} transactions`, 'success');
+
+                    let resultHtml = `
+                        <div class="space-y-4">
+                            <div class="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
+                                <h3 class="text-lg font-semibold text-green-400 mb-2">✅ API Connection Successful</h3>
+                                <div class="text-sm space-y-1">
+                                    <p>⏱️ Response time: <strong>${duration}ms</strong></p>
+                                    <p>📊 Total transactions: <strong>${transactions.length}</strong></p>
+                                    <p>📥 Incoming (to wallet): <strong>${incomingTxs.length}</strong></p>
+                                    <p>📤 Outgoing (from wallet): <strong>${transactions.length - incomingTxs.length}</strong></p>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-900 rounded-xl p-4">
+                                <h3 class="text-lg font-semibold mb-2">📋 Recent Incoming Transactions:</h3>
+                                <div class="space-y-2 max-h-96 overflow-y-auto">
+                                    ${incomingTxs.slice(0, 10).map((tx, idx) => {
+                                        const amount = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18));
+                                        const date = new Date(parseInt(tx.timeStamp) * 1000);
+                                        return `
+                                            <div class="bg-gray-800 rounded-lg p-3 text-xs">
+                                                <div class="flex justify-between items-start mb-1">
+                                                    <span class="text-purple-400 font-semibold">#${idx + 1}</span>
+                                                    <span class="text-green-400 font-bold">${amount.toFixed(2)} XTOO</span>
+                                                </div>
+                                                <div class="text-gray-400">
+                                                    <p>From: <code class="text-cyan-400">${tx.from.slice(0,6)}...${tx.from.slice(-4)}</code></p>
+                                                    <p>Date: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>
+                                                    <p>Hash: <code class="text-gray-500">${tx.hash.slice(0,10)}...${tx.hash.slice(-8)}</code></p>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+                                <h3 class="text-sm font-semibold text-blue-400 mb-2">📝 Raw API Response:</h3>
+                                <pre class="text-xs text-gray-400 overflow-x-auto">${JSON.stringify(data, null, 2).slice(0, 500)}...</pre>
+                            </div>
+                        </div>
+                    `;
+
+                    updateResults(resultHtml);
+
+                } else if (data.status === '0') {
+                    // API returned status 0 (error or no results)
+                    updateStatus('⚠️', 'API returned status 0', 'warning');
+                    
+                    updateResults(`
+                        <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4">
+                            <h3 class="text-lg font-semibold text-yellow-400 mb-2">⚠️ API Status: 0</h3>
+                            <p class="text-gray-300 mb-2">Message: <strong>${data.message}</strong></p>
+                            <p class="text-gray-300 mb-4">Result: <code>${JSON.stringify(data.result)}</code></p>
+                            
+                            <div class="mt-4 text-sm">
+                                <p class="text-gray-400 mb-2"><strong>Possible reasons:</strong></p>
+                                <ul class="list-disc list-inside text-gray-400 space-y-1">
+                                    <li>No transactions found for this wallet</li>
+                                    <li>Invalid API key</li>
+                                    <li>Rate limit exceeded</li>
+                                    <li>Invalid wallet or contract address</li>
+                                </ul>
+                            </div>
+
+                            <div class="mt-4 bg-gray-900 rounded p-3">
+                                <p class="text-xs text-gray-500">Full response:</p>
+                                <pre class="text-xs text-gray-400 mt-2">${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        </div>
+                    `);
+                } else {
+                    throw new Error('Unexpected API response format');
+                }
+
+            } catch (error) {
+                console.error('❌ API Error:', error);
+                updateStatus('❌', `API Error: ${error.message}`, 'error');
+                
+                updateResults(`
+                    <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                        <h3 class="text-lg font-semibold text-red-400 mb-2">❌ API Error</h3>
+                        <p class="text-gray-300 mb-2"><strong>Error:</strong> ${error.message}</p>
+                        
+                        <div class="mt-4 text-sm">
+                            <p class="text-gray-400 mb-2"><strong>Troubleshooting:</strong></p>
+                            <ul class="list-disc list-inside text-gray-400 space-y-1">
+                                <li>Check if API key is valid</li>
+                                <li>Verify wallet address format</li>
+                                <li>Confirm contract address is correct</li>
+                                <li>Check browser console for more details</li>
+                                <li>Try testing at: <a href="https://bscscan.com" target="_blank" class="text-blue-400 underline">bscscan.com</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="mt-4 bg-gray-900 rounded p-3">
+                            <p class="text-xs text-gray-500">Error details:</p>
+                            <pre class="text-xs text-red-400 mt-2">${error.stack || error.message}</pre>
+                        </div>
+                    </div>
+                `);
+            }
+        }
+
+        // Auto-load wallet from URL params if provided
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const wallet = params.get('wallet');
+            if (wallet) {
+                document.getElementById('walletAddress').value = wallet;
+            }
+        });
+    </script>
+</body>
+</html>

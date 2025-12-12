@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Direct Data Migration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-white mb-2 text-center">🚀 Direct Migration</h1>
+        <p class="text-center text-blue-200 mb-8">Since you already created the table, let's migrate directly!</p>
+        
+        <!-- Configuration -->
+        <div class="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">🔧 Your Supabase Credentials</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Project URL</label>
+                    <input 
+                        type="text" 
+                        id="supabaseUrl" 
+                        placeholder="https://your-new-project.supabase.co"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Anon Key</label>
+                    <textarea 
+                        id="supabaseKey" 
+                        placeholder="eyJhbGciOiJIUzI1NiIs..."
+                        rows="3"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="mb-6 p-4 rounded-xl border border-gray-600 bg-gray-800">
+            <div class="flex items-center space-x-2">
+                <div id="statusIcon">📋</div>
+                <span id="statusText">Ready for direct migration...</span>
+            </div>
+        </div>
+
+        <!-- Upload and Migrate -->
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium mb-2">📁 Select your JSON backup file:</label>
+                <input 
+                    type="file" 
+                    id="jsonFile" 
+                    accept=".json"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                >
+            </div>
+            
+            <button onclick="migrateDataNow()" class="w-full bg-green-600 hover:bg-green-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                🚀 Migrate Data Now!
+            </button>
+
+            <button onclick="verifyMigration()" class="w-full bg-cyan-600 hover:bg-cyan-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                ✅ Verify Migration
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="bg-gray-800 rounded-xl p-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">Migration Results</h2>
+            <div id="resultContent" class="text-gray-300">
+                Enter your credentials, select your JSON file, and click migrate!
+            </div>
+        </div>
+
+        <!-- New Credentials Display -->
+        <div id="newCredentials" class="hidden mt-6 bg-green-900/20 border border-green-500/30 rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-4 text-green-400">✅ Update Your Dashboard</h2>
+            <p class="text-green-200 mb-4">Copy this code and replace in your dashboard_investor_cloud.html:</p>
+            <pre id="credentialsCode" class="bg-gray-900 p-4 rounded-lg text-sm overflow-x-auto mb-4"></pre>
+            <div class="space-y-2">
+                <button onclick="copyCredentials()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold mr-4">
+                    📋 Copy New Credentials
+                </button>
+                <button onclick="updateDashboard()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold">
+                    🔧 Auto-Update Dashboard File
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabase = null;
+
+        // Update status
+        function updateStatus(icon, text, type = 'info') {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusText').textContent = text;
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `mb-6 p-4 rounded-xl border ${
+                type === 'success' ? 'border-green-500 bg-green-900/20' :
+                type === 'error' ? 'border-red-500 bg-red-900/20' :
+                type === 'warning' ? 'border-yellow-500 bg-yellow-900/20' :
+                'border-gray-600 bg-gray-800'
+            }`;
+        }
+
+        // Initialize Supabase connection
+        function initSupabase() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            if (!url || !key) {
+                updateStatus('⚠️', 'Please enter both URL and Key', 'warning');
+                return false;
+            }
+
+            try {
+                supabase = window.supabase.createClient(url, key);
+                return true;
+            } catch (error) {
+                updateStatus('❌', `Connection error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Migrate data directly
+        async function migrateDataNow() {
+            // Check inputs
+            if (!initSupabase()) {
+                return;
+            }
+
+            const fileInput = document.getElementById('jsonFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                updateStatus('⚠️', 'Please select a JSON backup file', 'warning');
+                return;
+            }
+
+            updateStatus('🔄', 'Reading backup file and migrating...', 'info');
+
+            try {
+                // Read JSON file
+                const text = await file.text();
+                const backupData = JSON.parse(text);
+                
+                if (!backupData.data || !Array.isArray(backupData.data)) {
+                    throw new Error('Invalid backup file format - missing data array');
+                }
+
+                const users = backupData.data;
+                updateStatus('🔄', `Migrating ${users.length} users...`, 'info');
+
+                // Prepare data for insertion
+                const insertData = users.map(user => ({
+                    wallet_address: user.wallet_address,
+                    name: user.name,
+                    initial_investment: parseFloat(user.initial_investment),
+                    initial_date: user.initial_date
+                }));
+
+                // Insert data
+                const { data, error } = await supabase
+                    .from('investors')
+                    .insert(insertData);
+
+                if (error) {
+                    throw error;
+                }
+
+                updateStatus('✅', `Successfully migrated ${users.length} users!`, 'success');
+                
+                const totalInvestment = users.reduce((sum, user) => sum + parseFloat(user.initial_investment || 0), 0);
+                
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ <strong>Migration Complete!</strong><br><br>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+                            <div class="text-blue-400 font-semibold">👥 Users</div>
+                            <div class="text-2xl font-bold">${users.length}</div>
+                        </div>
+                        <div class="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
+                            <div class="text-green-400 font-semibold">💰 Total Investment</div>
+                            <div class="text-2xl font-bold">$${totalInvestment.toLocaleString()}</div>
+                        </div>
+                        <div class="bg-purple-900/20 border border-purple-500/30 rounded-xl p-4">
+                            <div class="text-purple-400 font-semibold">📊 Average</div>
+                            <div class="text-2xl font-bold">$${(totalInvestment/users.length).toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    <div class="text-left">
+                        <h4 class="text-lg font-semibold mb-2">👥 Migrated Users:</h4>
+                        ${users.map(user => `
+                            <div class="text-sm text-gray-300 mb-1">
+                                👤 <strong>${user.name}</strong> - 💰 $${parseFloat(user.initial_investment).toLocaleString()} - 💼 ${user.wallet_address.slice(0,6)}...${user.wallet_address.slice(-4)}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`);
+
+                // Show credentials update section
+                showCredentialsUpdate();
+
+            } catch (error) {
+                updateStatus('❌', `Migration failed: ${error.message}`, 'error');
+                updateResults(`<div class="text-red-400 font-semibold">
+                    ❌ <strong>Migration Error:</strong><br>
+                    ${error.message}<br><br>
+                    
+                    <strong>Possible solutions:</strong><br>
+                    • Make sure the investors table exists in your Supabase<br>
+                    • Check that your credentials are correct<br>
+                    • Verify the JSON file format is correct
+                </div>`);
+            }
+        }
+
+        // Verify migration
+        async function verifyMigration() {
+            if (!initSupabase()) {
+                return;
+            }
+
+            updateStatus('🔄', 'Verifying migrated data...', 'info');
+
+            try {
+                const { data, error } = await supabase
+                    .from('investors')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                if (data.length === 0) {
+                    updateStatus('⚠️', 'No data found - migration may have failed', 'warning');
+                    updateResults('<div class="text-yellow-400 font-semibold">⚠️ No data found in the investors table</div>');
+                    return;
+                }
+
+                const totalInvestment = data.reduce((sum, user) => sum + parseFloat(user.initial_investment || 0), 0);
+
+                updateStatus('✅', `Verification complete! ${data.length} users found`, 'success');
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ <strong>Migration Verified!</strong><br><br>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+                            <div class="text-blue-400 font-semibold">👥 Total Users</div>
+                            <div class="text-2xl font-bold">${data.length}</div>
+                        </div>
+                        <div class="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
+                            <div class="text-green-400 font-semibold">💰 Total Investment</div>
+                            <div class="text-2xl font-bold">$${totalInvestment.toLocaleString()}</div>
+                        </div>
+                        <div class="bg-purple-900/20 border border-purple-500/30 rounded-xl p-4">
+                            <div class="text-purple-400 font-semibold">📊 Average</div>
+                            <div class="text-2xl font-bold">$${(totalInvestment/data.length).toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    <div class="text-left">
+                        <h4 class="text-lg font-semibold mb-2">📋 Current Users in Database:</h4>
+                        ${data.map(user => `
+                            <div class="text-sm text-gray-300 mb-1">
+                                👤 <strong>${user.name}</strong> - 💰 $${parseFloat(user.initial_investment).toLocaleString()} - 
+                                📅 ${new Date(user.initial_date).toLocaleDateString()} - 
+                                🕒 ${new Date(user.created_at).toLocaleString()}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`);
+
+                showCredentialsUpdate();
+
+            } catch (error) {
+                updateStatus('❌', `Verification failed: ${error.message}`, 'error');
+                updateResults(`<div class="text-red-400 font-semibold">❌ Verification Error: ${error.message}</div>`);
+            }
+        }
+
+        // Show credentials update section
+        function showCredentialsUpdate() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            const code = `// ✅ UPDATE: Replace these lines in dashboard_investor_cloud.html (around line 517-518)
+const SUPABASE_URL = '${url}';
+const SUPABASE_ANON_KEY = '${key}';`;
+
+            document.getElementById('credentialsCode').textContent = code;
+            document.getElementById('newCredentials').classList.remove('hidden');
+        }
+
+        // Copy credentials to clipboard
+        async function copyCredentials() {
+            const code = document.getElementById('credentialsCode').textContent;
+            try {
+                await navigator.clipboard.writeText(code);
+                alert('✅ New credentials copied to clipboard! Now update your dashboard file.');
+            } catch (error) {
+                alert('❌ Failed to copy. Please select and copy the code manually.');
+            }
+        }
+
+        // Auto-update dashboard file
+        async function updateDashboard() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            // This would require a server-side script to modify files
+            // For now, we'll show instructions
+            updateResults(`<div class="text-blue-400 font-semibold">
+                🔧 <strong>Auto-Update Instructions:</strong><br><br>
+                
+                <strong>Method 1: Manual Update (Recommended)</strong><br>
+                1. Open <code>dashboard_investor_cloud.html</code> in a text editor<br>
+                2. Find lines around 517-518 with old SUPABASE_URL and SUPABASE_ANON_KEY<br>
+                3. Replace with the copied new credentials<br>
+                4. Save the file<br><br>
+                
+                <strong>Method 2: Find and Replace</strong><br>
+                • Find: <code>https://slowkvbzjopnsgiwfdvs.supabase.co</code><br>
+                • Replace with: <code>${url}</code><br><br>
+                
+                • Find the old anon key (starts with eyJhbGciOiJIUzI1NiIs...)<br>
+                • Replace with your new key<br><br>
+                
+                <strong>✅ Once updated, test your dashboard!</strong>
+            </div>`);
+        }
+
+        // Update results display
+        function updateResults(html) {
+            document.getElementById('resultContent').innerHTML = html;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('📋', 'Ready for direct migration - table already created!', 'info');
+        });
+    </script>
+</body>
+</html>

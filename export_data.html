@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 Export Supabase Data - URGENT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-white mb-2 text-center">🚨 DATA EXPORT - URGENT</h1>
+        <p class="text-center text-red-200 mb-8">Export data before Supabase deletes the project!</p>
+        
+        <!-- Status -->
+        <div id="status" class="mb-6 p-4 rounded-xl border border-red-600 bg-red-800">
+            <div class="flex items-center space-x-2">
+                <div id="statusIcon">🔄</div>
+                <span id="statusText">Ready to export data...</span>
+            </div>
+        </div>
+
+        <!-- Export Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <button onclick="exportToJSON()" class="bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                📄 Export to JSON
+            </button>
+            <button onclick="exportToCSV()" class="bg-green-600 hover:bg-green-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                📊 Export to CSV
+            </button>
+        </div>
+
+        <!-- Quick Copy -->
+        <div class="mb-6">
+            <button onclick="copyAllData()" class="w-full bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                📋 Copy All Data to Clipboard
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="bg-gray-800 rounded-xl p-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">Export Results</h2>
+            <div id="resultContent" class="text-gray-300">
+                Click export buttons to save your data
+            </div>
+        </div>
+
+        <!-- Downloaded Files -->
+        <div id="downloads" class="mt-6"></div>
+    </div>
+
+    <script>
+        // Supabase configuration (from existing project)
+        const SUPABASE_URL = 'https://slowkvbzjopnsgiwfdvs.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsb3drdmJ6am9wbnNnaXdmZHZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MTk5ODQsImV4cCI6MjA3NDM5NTk4NH0.phvZ282_EGIbrAv54bigNPH9eIw4qZmC1Fa0y9Q-_d4';
+        
+        let supabase;
+        let allData = [];
+
+        // Initialize
+        function initSupabase() {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                updateStatus('✅', 'Connected - Ready to export!', 'success');
+                return true;
+            } catch (error) {
+                updateStatus('❌', `Error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Update status
+        function updateStatus(icon, text, type = 'info') {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusText').textContent = text;
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `mb-6 p-4 rounded-xl border ${
+                type === 'success' ? 'border-green-500 bg-green-900/20' :
+                type === 'error' ? 'border-red-500 bg-red-900/20' :
+                'border-red-600 bg-red-800'
+            }`;
+        }
+
+        // Load all data
+        async function loadAllData() {
+            updateStatus('🔄', 'Loading all data from Supabase...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('investors')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                allData = data;
+                updateStatus('✅', `Loaded ${data.length} records successfully`, 'success');
+                return data;
+                
+            } catch (error) {
+                updateStatus('❌', `Loading failed: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Export to JSON
+        async function exportToJSON() {
+            try {
+                const data = await loadAllData();
+                
+                const exportData = {
+                    exportedAt: new Date().toISOString(),
+                    source: 'Supabase Project: slowkvbzjopnsgiwfdvs',
+                    totalRecords: data.length,
+                    data: data
+                };
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], 
+                    { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `web3_investors_backup_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ JSON file downloaded successfully!<br>
+                    📁 File: ${a.download}<br>
+                    📊 Records: ${data.length}
+                </div>`);
+
+                showDownloadInfo('JSON', a.download, data.length);
+                
+            } catch (error) {
+                updateResults(`<div class="text-red-400 font-semibold">❌ JSON Export Error: ${error.message}</div>`);
+            }
+        }
+
+        // Export to CSV
+        async function exportToCSV() {
+            try {
+                const data = await loadAllData();
+                
+                if (data.length === 0) {
+                    updateResults(`<div class="text-yellow-400 font-semibold">⚠️ No data to export</div>`);
+                    return;
+                }
+
+                // Create CSV headers
+                const headers = Object.keys(data[0]);
+                const csvContent = [
+                    headers.join(','),
+                    ...data.map(row => 
+                        headers.map(header => {
+                            let value = row[header] || '';
+                            // Escape commas and quotes
+                            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                                value = `"${value.replace(/"/g, '""')}"`;
+                            }
+                            return value;
+                        }).join(',')
+                    )
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `web3_investors_backup_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+                
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ CSV file downloaded successfully!<br>
+                    📁 File: ${a.download}<br>
+                    📊 Records: ${data.length}<br>
+                    📋 Columns: ${headers.join(', ')}
+                </div>`);
+
+                showDownloadInfo('CSV', a.download, data.length);
+                
+            } catch (error) {
+                updateResults(`<div class="text-red-400 font-semibold">❌ CSV Export Error: ${error.message}</div>`);
+            }
+        }
+
+        // Copy to clipboard
+        async function copyAllData() {
+            try {
+                const data = await loadAllData();
+                
+                const textData = data.map(user => 
+                    `Name: ${user.name}\nWallet: ${user.wallet_address}\nInvestment: $${user.initial_investment}\nDate: ${user.initial_date}\nCreated: ${user.created_at}\n---`
+                ).join('\n');
+
+                await navigator.clipboard.writeText(textData);
+                
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ All data copied to clipboard!<br>
+                    📋 ${data.length} records copied<br>
+                    📝 You can paste this data anywhere
+                </div>`);
+                
+            } catch (error) {
+                updateResults(`<div class="text-red-400 font-semibold">❌ Copy Error: ${error.message}</div>`);
+            }
+        }
+
+        // Show download info
+        function showDownloadInfo(type, filename, records) {
+            const downloadDiv = document.getElementById('downloads');
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'bg-green-900/20 border border-green-500/30 rounded-xl p-4 mb-4';
+            infoDiv.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-semibold text-green-400">📁 ${type} Export Complete</div>
+                        <div class="text-sm text-gray-300">File: ${filename}</div>
+                        <div class="text-sm text-gray-300">Records: ${records}</div>
+                    </div>
+                    <div class="text-3xl">✅</div>
+                </div>
+            `;
+            downloadDiv.appendChild(infoDiv);
+        }
+
+        // Update results
+        function updateResults(html) {
+            document.getElementById('resultContent').innerHTML = html;
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            initSupabase();
+        });
+    </script>
+</body>
+</html>

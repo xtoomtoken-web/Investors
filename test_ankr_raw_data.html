@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ankr Raw Data Inspector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🔬 Ankr Raw Data Inspector</h1>
+        
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Ver formato exacto de los datos</h2>
+            
+            <div class="mb-4">
+                <label class="block text-sm text-gray-400 mb-2">Tu Wallet Address</label>
+                <input type="text" id="walletInput" 
+                       value="0xb9707c6e18417fa88c0f99c39e02b93cd3b6a156"
+                       class="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600">
+            </div>
+            
+            <button onclick="inspectData()" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded font-semibold">
+                🔬 Inspeccionar Datos XTOO
+            </button>
+        </div>
+
+        <div id="results" class="space-y-4"></div>
+    </div>
+
+    <script>
+        const ANKR_TOKEN = 'b8ca6addb739c1a0b0ff1459c35e3807ed41fba669db7e4cfc13abdc45d9c6f5';
+        const ANKR_ENDPOINT = `https://rpc.ankr.com/multichain/${ANKR_TOKEN}`;
+        
+        async function inspectData() {
+            const wallet = document.getElementById('walletInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = `
+                <div class="bg-slate-800 rounded-lg p-6">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-4"></div>
+                    <p class="text-center text-gray-400">Obteniendo datos...</p>
+                </div>
+            `;
+            
+            const request = {
+                jsonrpc: '2.0',
+                method: 'ankr_getTokenTransfers',
+                params: {
+                    address: [wallet],
+                    blockchain: ['bsc']
+                },
+                id: 1
+            };
+            
+            try {
+                const response = await fetch(ANKR_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request)
+                });
+                
+                const data = await response.json();
+                
+                if (data.result && data.result.transfers) {
+                    // Filter XTOO only
+                    const xtooTransfers = data.result.transfers.filter(tx => 
+                        tx.contractAddress && tx.contractAddress.toLowerCase() === '0x5cfc37a4ae6108e146f2bbed702c4acabb5a149a'
+                    );
+                    
+                    if (xtooTransfers.length > 0) {
+                        displayRawData(xtooTransfers, wallet);
+                    } else {
+                        resultsDiv.innerHTML = `<div class="bg-yellow-900/30 border border-yellow-500 rounded-lg p-6"><p class="text-yellow-400">No XTOO transfers found</p></div>`;
+                    }
+                } else {
+                    resultsDiv.innerHTML = `<div class="bg-red-900/30 border border-red-500 rounded-lg p-6"><p class="text-red-400">Error: ${JSON.stringify(data)}</p></div>`;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="bg-red-900/30 border border-red-500 rounded-lg p-6"><p class="text-red-400">Error: ${error.message}</p></div>`;
+            }
+        }
+        
+        function displayRawData(transfers, wallet) {
+            const resultsDiv = document.getElementById('results');
+            
+            // Show first 3 transactions in detail
+            const samples = transfers.slice(0, 3);
+            
+            console.log('📊 All XTOO Transfers:', transfers);
+            console.log('🔬 Sample transactions:', samples);
+            
+            // Try different parsing methods
+            const parseMethods = samples.map(tx => {
+                const methods = {};
+                
+                // Method 1: Direct parse
+                methods.directValue = tx.value;
+                methods.valueType = typeof tx.value;
+                
+                // Method 2: Parse as decimal string
+                try {
+                    methods.asFloat = parseFloat(tx.value);
+                } catch (e) {
+                    methods.asFloat = 'ERROR: ' + e.message;
+                }
+                
+                // Method 3: Parse with decimals
+                try {
+                    const decimals = parseInt(tx.tokenDecimals || 18);
+                    methods.withDecimals = parseFloat(tx.value) / Math.pow(10, decimals);
+                } catch (e) {
+                    methods.withDecimals = 'ERROR: ' + e.message;
+                }
+                
+                // Method 4: BigInt if it's hex
+                try {
+                    if (typeof tx.value === 'string' && tx.value.startsWith('0x')) {
+                        const bigIntValue = BigInt(tx.value);
+                        const decimals = BigInt(10 ** parseInt(tx.tokenDecimals || 18));
+                        methods.fromHex = Number(bigIntValue) / Number(decimals);
+                    }
+                } catch (e) {
+                    methods.fromHex = 'N/A';
+                }
+                
+                return {
+                    tx: tx,
+                    methods: methods,
+                    direction: tx.toAddress.toLowerCase() === wallet.toLowerCase() ? 'IN' : 'OUT'
+                };
+            });
+            
+            resultsDiv.innerHTML = `
+                <div class="bg-slate-800 rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">🔬 Análisis de Datos XTOO</h3>
+                    <p class="text-gray-400 mb-6">Total transacciones XTOO: ${transfers.length}</p>
+                    
+                    <h4 class="text-xl font-bold mb-3">Primeras 3 Transacciones (Raw Data):</h4>
+                    
+                    ${parseMethods.map((item, i) => `
+                        <div class="bg-slate-700 rounded-lg p-4 mb-4">
+                            <h5 class="font-bold text-lg mb-3 ${item.direction === 'IN' ? 'text-green-400' : 'text-red-400'}">
+                                Transaction #${i + 1} (${item.direction})
+                            </h5>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <p class="text-xs text-gray-400">Hash</p>
+                                    <p class="text-xs font-mono text-gray-300">${item.tx.transactionHash}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400">Timestamp</p>
+                                    <p class="text-sm text-white">${item.tx.timestamp ? new Date(item.tx.timestamp * 1000).toLocaleString() : 'N/A'}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-slate-900 rounded p-3 mb-3">
+                                <p class="text-xs text-gray-400 mb-2">Campo RAW "value":</p>
+                                <p class="text-sm font-mono text-yellow-300 break-all">${JSON.stringify(item.tx.value)}</p>
+                                <p class="text-xs text-gray-500 mt-1">Tipo: ${item.methods.valueType}</p>
+                            </div>
+                            
+                            <div class="bg-slate-900 rounded p-3 mb-3">
+                                <p class="text-xs text-gray-400 mb-2">Token Decimals:</p>
+                                <p class="text-sm text-white">${item.tx.tokenDecimals || 'undefined'}</p>
+                            </div>
+                            
+                            <h6 class="font-bold text-sm mb-2 text-purple-400">Métodos de Parsing:</h6>
+                            <div class="space-y-2">
+                                <div class="bg-slate-900 rounded p-2">
+                                    <p class="text-xs text-gray-400">parseFloat(value):</p>
+                                    <p class="text-sm ${item.methods.asFloat > 0 ? 'text-green-400' : 'text-red-400'}">${item.methods.asFloat}</p>
+                                </div>
+                                <div class="bg-slate-900 rounded p-2">
+                                    <p class="text-xs text-gray-400">parseFloat(value) / 10^decimals:</p>
+                                    <p class="text-sm ${item.methods.withDecimals > 0 ? 'text-green-400' : 'text-red-400'}">${item.methods.withDecimals}</p>
+                                </div>
+                                ${item.methods.fromHex !== 'N/A' ? `
+                                    <div class="bg-slate-900 rounded p-2">
+                                        <p class="text-xs text-gray-400">BigInt(hex) / 10^decimals:</p>
+                                        <p class="text-sm ${item.methods.fromHex > 0 ? 'text-green-400' : 'text-red-400'}">${item.methods.fromHex}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                    
+                    <div class="bg-blue-900/30 border border-blue-500 rounded-lg p-4 mt-6">
+                        <h5 class="font-bold mb-2">📋 Full Raw Data (First Transaction):</h5>
+                        <pre class="text-xs text-gray-300 overflow-x-auto">${JSON.stringify(samples[0].tx, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

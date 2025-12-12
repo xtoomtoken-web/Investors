@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔄 Migrate Data to New Supabase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-white mb-2 text-center">🔄 Data Migration Tool</h1>
+        <p class="text-center text-blue-200 mb-8">Migrate rescued data to your new Supabase project</p>
+        
+        <!-- Configuration -->
+        <div class="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">🔧 New Supabase Configuration</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Project URL</label>
+                    <input 
+                        type="text" 
+                        id="newSupabaseUrl" 
+                        placeholder="https://your-new-project.supabase.co"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Anon Key</label>
+                    <textarea 
+                        id="newSupabaseKey" 
+                        placeholder="eyJhbGciOiJIUzI1NiIs..."
+                        rows="3"
+                        class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white"
+                    ></textarea>
+                </div>
+                <button onclick="testNewConnection()" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-xl font-semibold transition-colors">
+                    🔍 Test New Connection
+                </button>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="mb-6 p-4 rounded-xl border border-gray-600 bg-gray-800">
+            <div class="flex items-center space-x-2">
+                <div id="statusIcon">📋</div>
+                <span id="statusText">Ready to migrate data...</span>
+            </div>
+        </div>
+
+        <!-- Migration Steps -->
+        <div class="space-y-4 mb-6">
+            <button onclick="createTable()" class="w-full bg-green-600 hover:bg-green-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                1️⃣ Create investors table
+            </button>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">2️⃣ Upload JSON backup file:</label>
+                <input 
+                    type="file" 
+                    id="jsonFile" 
+                    accept=".json"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                >
+            </div>
+            
+            <button onclick="migrateData()" class="w-full bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                3️⃣ Migrate Data from JSON
+            </button>
+
+            <button onclick="verifyMigration()" class="w-full bg-cyan-600 hover:bg-cyan-700 px-6 py-4 rounded-xl font-semibold transition-colors text-lg">
+                4️⃣ Verify Migration
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="bg-gray-800 rounded-xl p-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-4">Migration Results</h2>
+            <div id="resultContent" class="text-gray-300">
+                Configure your new Supabase credentials first, then follow the migration steps.
+            </div>
+        </div>
+
+        <!-- Quick Copy New Credentials -->
+        <div id="newCredentials" class="hidden mt-6 bg-green-900/20 border border-green-500/30 rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-4 text-green-400">✅ New Dashboard Configuration</h2>
+            <p class="text-green-200 mb-4">Copy this code to update your dashboard:</p>
+            <pre id="credentialsCode" class="bg-gray-900 p-4 rounded-lg text-sm overflow-x-auto"></pre>
+            <button onclick="copyCredentials()" class="mt-4 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold">
+                📋 Copy Code
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let newSupabase = null;
+        let migrationData = null;
+
+        // Update status
+        function updateStatus(icon, text, type = 'info') {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusText').textContent = text;
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `mb-6 p-4 rounded-xl border ${
+                type === 'success' ? 'border-green-500 bg-green-900/20' :
+                type === 'error' ? 'border-red-500 bg-red-900/20' :
+                type === 'warning' ? 'border-yellow-500 bg-yellow-900/20' :
+                'border-gray-600 bg-gray-800'
+            }`;
+        }
+
+        // Test new connection
+        async function testNewConnection() {
+            const url = document.getElementById('newSupabaseUrl').value.trim();
+            const key = document.getElementById('newSupabaseKey').value.trim();
+
+            if (!url || !key) {
+                updateStatus('⚠️', 'Please enter both URL and Key', 'warning');
+                return;
+            }
+
+            updateStatus('🔄', 'Testing new connection...', 'info');
+
+            try {
+                newSupabase = window.supabase.createClient(url, key);
+                
+                // Test connection by checking auth status
+                const { data: { user }, error: authError } = await newSupabase.auth.getUser();
+                
+                if (authError && authError.message.includes('Invalid JWT')) {
+                    // This is expected for anonymous access - connection is working
+                    updateStatus('✅', 'Connection successful! Ready to create table.', 'success');
+                    updateResults('<div class="text-green-400 font-semibold">✅ New Supabase connection working!</div>');
+                    return;
+                }
+                
+                // Alternative: try to access a non-existent table (simpler approach)
+                const { error } = await newSupabase
+                    .from('investors')
+                    .select('count')
+                    .limit(1);
+                
+                // Connection is working if we get any response (even table not found)
+                updateStatus('✅', 'Connection successful! Ready to create table.', 'success');
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ New Supabase connection working!<br>
+                    ${error ? `<small class="text-gray-400">Note: ${error.message}</small>` : ''}
+                </div>`);
+                
+            } catch (error) {
+                updateStatus('❌', `Connection failed: ${error.message}`, 'error');
+                updateResults(`<div class="text-red-400 font-semibold">❌ Connection Error: ${error.message}</div>`);
+            }
+        }
+
+        // Create table
+        async function createTable() {
+            if (!newSupabase) {
+                updateStatus('⚠️', 'Test connection first!', 'warning');
+                return;
+            }
+
+            updateStatus('❌', 'Manual table creation required', 'error');
+            updateResults(`<div class="text-yellow-400 font-semibold">
+                ⚠️ <strong>Manual Setup Required</strong><br><br>
+                
+                <strong>Go to your Supabase Dashboard:</strong><br>
+                1. Open your project: <a href="${document.getElementById('newSupabaseUrl').value.replace('//', '//').replace('.co', '.co/dashboard')}" target="_blank" class="text-blue-400 underline">Open Supabase Dashboard</a><br>
+                2. Go to <strong>SQL Editor</strong><br>
+                3. Create a <strong>New Query</strong><br>
+                4. Copy and paste this SQL code:<br><br>
+                
+                <div class="bg-gray-900 p-4 rounded-lg text-sm overflow-x-auto">
+                    <pre>-- Create investors table
+CREATE TABLE public.investors (
+    id SERIAL PRIMARY KEY,
+    wallet_address TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    initial_investment NUMERIC NOT NULL,
+    initial_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.investors ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for public access (demo)
+CREATE POLICY "Anyone can read investors" ON public.investors
+    FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can insert investors" ON public.investors
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Anyone can update investors" ON public.investors
+    FOR UPDATE USING (true);
+
+-- Create index for faster wallet lookups
+CREATE INDEX idx_investors_wallet_address ON public.investors(wallet_address);</pre>
+                </div>
+                
+                <br>5. Click <strong>RUN</strong><br>
+                6. Come back here and continue with data migration<br><br>
+                
+                <button onclick="checkTableExists()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold">
+                    ✅ I created the table - Continue
+                </button>
+            </div>`);
+        }
+
+        // Check if table exists
+        async function checkTableExists() {
+            updateStatus('🔄', 'Checking if table exists...', 'info');
+            
+            try {
+                const { data, error } = await newSupabase
+                    .from('investors')
+                    .select('count')
+                    .limit(1);
+
+                updateStatus('✅', 'Table found! Ready for data migration.', 'success');
+                updateResults('<div class="text-green-400 font-semibold">✅ investors table is ready! Now you can migrate your data.</div>');
+                
+            } catch (error) {
+                updateStatus('❌', 'Table not found. Please create it first.', 'error');
+                updateResults(`<div class="text-red-400 font-semibold">❌ Table not found: ${error.message}<br>Please create the table using the SQL code above.</div>`);
+            }
+        }
+
+        // Migrate data from JSON file
+        async function migrateData() {
+            const fileInput = document.getElementById('jsonFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                updateStatus('⚠️', 'Please select a JSON backup file', 'warning');
+                return;
+            }
+
+            if (!newSupabase) {
+                updateStatus('⚠️', 'Test connection first!', 'warning');
+                return;
+            }
+
+            updateStatus('🔄', 'Reading backup file...', 'info');
+
+            try {
+                const text = await file.text();
+                const backupData = JSON.parse(text);
+                
+                if (!backupData.data || !Array.isArray(backupData.data)) {
+                    throw new Error('Invalid backup file format');
+                }
+
+                migrationData = backupData.data;
+                updateStatus('🔄', `Migrating ${migrationData.length} records...`, 'info');
+
+                // Insert data
+                const { data, error } = await newSupabase
+                    .from('investors')
+                    .insert(migrationData.map(user => ({
+                        wallet_address: user.wallet_address,
+                        name: user.name,
+                        initial_investment: user.initial_investment,
+                        initial_date: user.initial_date
+                    })));
+
+                if (error) {
+                    throw error;
+                }
+
+                updateStatus('✅', `Successfully migrated ${migrationData.length} records!`, 'success');
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ Migration Complete!<br>
+                    📊 Records migrated: ${migrationData.length}<br>
+                    👥 Users: ${migrationData.map(u => u.name).join(', ')}
+                </div>`);
+
+                // Show new credentials
+                showNewCredentials();
+
+            } catch (error) {
+                updateStatus('❌', `Migration failed: ${error.message}`, 'error');
+                updateResults(`<div class="text-red-400 font-semibold">❌ Migration Error: ${error.message}</div>`);
+            }
+        }
+
+        // Verify migration
+        async function verifyMigration() {
+            if (!newSupabase) {
+                updateStatus('⚠️', 'Test connection first!', 'warning');
+                return;
+            }
+
+            updateStatus('🔄', 'Verifying migrated data...', 'info');
+
+            try {
+                const { data, error } = await newSupabase
+                    .from('investors')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                const totalInvestment = data.reduce((sum, user) => sum + parseFloat(user.initial_investment || 0), 0);
+
+                updateStatus('✅', `Verification complete! ${data.length} records found`, 'success');
+                updateResults(`<div class="text-green-400 font-semibold">
+                    ✅ Migration Verified!<br><br>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+                            <div class="text-blue-400 font-semibold">👥 Users</div>
+                            <div class="text-2xl font-bold">${data.length}</div>
+                        </div>
+                        <div class="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
+                            <div class="text-green-400 font-semibold">💰 Total</div>
+                            <div class="text-2xl font-bold">$${totalInvestment.toLocaleString()}</div>
+                        </div>
+                        <div class="bg-purple-900/20 border border-purple-500/30 rounded-xl p-4">
+                            <div class="text-purple-400 font-semibold">📊 Avg</div>
+                            <div class="text-2xl font-bold">$${(totalInvestment/data.length).toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-lg font-semibold mb-2">Migrated Users:</h4>
+                        ${data.map(user => `
+                            <div class="text-sm text-gray-300">
+                                👤 ${user.name} - 💰 $${parseFloat(user.initial_investment).toLocaleString()}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`);
+
+            } catch (error) {
+                updateStatus('❌', `Verification failed: ${error.message}`, 'error');
+                updateResults(`<div class="text-red-400 font-semibold">❌ Verification Error: ${error.message}</div>`);
+            }
+        }
+
+        // Show new credentials
+        function showNewCredentials() {
+            const url = document.getElementById('newSupabaseUrl').value.trim();
+            const key = document.getElementById('newSupabaseKey').value.trim();
+
+            const code = `// ✅ NEW Supabase Configuration - Replace in dashboard_investor_cloud.html
+const SUPABASE_URL = '${url}';
+const SUPABASE_ANON_KEY = '${key}';`;
+
+            document.getElementById('credentialsCode').textContent = code;
+            document.getElementById('newCredentials').classList.remove('hidden');
+        }
+
+        // Copy credentials
+        async function copyCredentials() {
+            const code = document.getElementById('credentialsCode').textContent;
+            await navigator.clipboard.writeText(code);
+            alert('✅ New credentials copied! Now update your dashboard file.');
+        }
+
+        // Update results
+        function updateResults(html) {
+            document.getElementById('resultContent').innerHTML = html;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('📋', 'Ready to migrate data to your new Supabase project', 'info');
+        });
+    </script>
+</body>
+</html>

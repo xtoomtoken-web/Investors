@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple API Test</title>
+</head>
+<body style="background: #1a1a1a; color: white; padding: 40px; font-family: monospace;">
+    <h1>🔍 BSCScan API Test</h1>
+    <button onclick="testAPI()" style="padding: 20px; font-size: 18px; cursor: pointer;">TEST API NOW</button>
+    <pre id="result" style="background: #2a2a2a; padding: 20px; margin-top: 20px; overflow: auto;"></pre>
+    
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.textContent = 'Testing...\n\n';
+            
+            // Tu wallet actual de MetaMask
+            const wallet = prompt('Enter your MetaMask wallet address:', '0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2');
+            
+            if (!wallet) {
+                result.textContent = 'Cancelled';
+                return;
+            }
+            
+            result.textContent += `Wallet: ${wallet}\n\n`;
+            
+            // Construir URL
+            const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a&address=${wallet}&page=1&offset=10&sort=desc&apikey=1SBKZNRWAU5MS3Q2VQXFMUZWMGKJRSGF5M`;
+            
+            result.textContent += 'Calling BSCScan API...\n\n';
+            
+            try {
+                const response = await fetch(url);
+                result.textContent += `HTTP Status: ${response.status} ${response.statusText}\n\n`;
+                
+                const data = await response.json();
+                
+                result.textContent += '=== API RESPONSE ===\n';
+                result.textContent += `Status: ${data.status}\n`;
+                result.textContent += `Message: ${data.message}\n\n`;
+                
+                if (data.status === '1' && data.result) {
+                    result.textContent += `✅ SUCCESS! Found ${data.result.length} transactions\n\n`;
+                    
+                    // Filter incoming
+                    const incoming = data.result.filter(tx => 
+                        tx.to && tx.to.toLowerCase() === wallet.toLowerCase()
+                    );
+                    
+                    result.textContent += `Incoming transactions: ${incoming.length}\n\n`;
+                    
+                    if (incoming.length > 0) {
+                        result.textContent += '=== LATEST TRANSACTION ===\n';
+                        const tx = incoming[0];
+                        const amount = parseFloat(tx.value) / 1e18;
+                        result.textContent += `Amount: ${amount.toFixed(4)} XTOO\n`;
+                        result.textContent += `From: ${tx.from}\n`;
+                        result.textContent += `Date: ${new Date(tx.timeStamp * 1000).toLocaleString()}\n`;
+                        result.textContent += `Hash: ${tx.hash}\n\n`;
+                    }
+                    
+                    result.textContent += '=== FULL RESPONSE (first 1000 chars) ===\n';
+                    result.textContent += JSON.stringify(data, null, 2).substring(0, 1000) + '...\n';
+                    
+                } else if (data.status === '0') {
+                    result.textContent += `❌ API returned status 0\n`;
+                    result.textContent += `Message: ${data.message}\n`;
+                    result.textContent += `Result: ${JSON.stringify(data.result)}\n\n`;
+                    
+                    result.textContent += 'POSSIBLE REASONS:\n';
+                    result.textContent += '1. No transactions found for this wallet\n';
+                    result.textContent += '2. Invalid API key\n';
+                    result.textContent += '3. Rate limit exceeded\n';
+                    result.textContent += '4. API is down\n\n';
+                    
+                    result.textContent += '=== FULL RESPONSE ===\n';
+                    result.textContent += JSON.stringify(data, null, 2) + '\n';
+                } else {
+                    result.textContent += '❌ UNEXPECTED RESPONSE FORMAT\n\n';
+                    result.textContent += JSON.stringify(data, null, 2) + '\n';
+                }
+                
+            } catch (error) {
+                result.textContent += `\n❌ ERROR: ${error.message}\n`;
+                result.textContent += `\nStack: ${error.stack}\n`;
+            }
+        }
+        
+        // Auto-test on load
+        setTimeout(() => {
+            console.log('Page loaded. Click TEST API NOW button.');
+        }, 100);
+    </script>
+</body>
+</html>

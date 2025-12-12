@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Cache & Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">🧹 Clear Cache & Test</h1>
+        
+        <div class="space-y-4">
+            <button onclick="clearAllCache()" class="w-full bg-red-600 hover:bg-red-700 px-6 py-4 rounded-xl font-semibold">
+                🗑️ Clear ALL Cache & Storage
+            </button>
+            
+            <button onclick="testAPI()" class="w-full bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-xl font-semibold">
+                🧪 Test BSCScan API Directly
+            </button>
+            
+            <button onclick="openDashboard()" class="w-full bg-green-600 hover:bg-green-700 px-6 py-4 rounded-xl font-semibold">
+                🚀 Open Dashboard (Fresh)
+            </button>
+        </div>
+        
+        <div id="results" class="mt-8 bg-gray-800 rounded-xl p-6 min-h-32"></div>
+    </div>
+    
+    <script>
+        const WALLET = '0xe2fEE19314e1f572C4dffE669C62dd5BCbb9d2d2'; // Ruby
+        const CONTRACT = '0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a'; // XTOO
+        const API_KEY = '1SBKZNRWAU5MS3Q2VQXFMUZWMGKJRSGF5M';
+        
+        function log(msg, type = 'info') {
+            const results = document.getElementById('results');
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-gray-300';
+            results.innerHTML += `<div class="${color} text-sm mb-1">${msg}</div>`;
+        }
+        
+        function clearAllCache() {
+            document.getElementById('results').innerHTML = '';
+            log('🧹 Clearing all cache and storage...', 'info');
+            
+            // Clear localStorage
+            localStorage.clear();
+            log('✅ localStorage cleared');
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            log('✅ sessionStorage cleared');
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            log('✅ Cookies cleared');
+            
+            log('✅ All cache cleared! Now test the API...', 'success');
+        }
+        
+        async function testAPI() {
+            document.getElementById('results').innerHTML = '';
+            log('🔄 Testing BSCScan API...', 'info');
+            
+            const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${CONTRACT}&address=${WALLET}&page=1&offset=10&sort=desc&apikey=${API_KEY}`;
+            
+            log(`📡 URL: ${url.substring(0, 100)}...`);
+            
+            try {
+                const start = Date.now();
+                const response = await fetch(url);
+                const duration = Date.now() - start;
+                
+                log(`⏱️ Response time: ${duration}ms`);
+                log(`📊 Status: ${response.status} ${response.statusText}`);
+                
+                const data = await response.json();
+                
+                log(`📋 Response status: "${data.status}"`, data.status === '1' ? 'success' : 'error');
+                log(`📋 Message: "${data.message}"`);
+                
+                if (data.status === '1' && data.result) {
+                    log(`✅ Found ${data.result.length} transactions!`, 'success');
+                    
+                    // Filter incoming
+                    const incoming = data.result.filter(tx => 
+                        tx.to && tx.to.toLowerCase() === WALLET.toLowerCase()
+                    );
+                    log(`📥 Incoming transactions: ${incoming.length}`, 'success');
+                    
+                    // Show first transaction
+                    if (incoming.length > 0) {
+                        const first = incoming[0];
+                        const amount = parseFloat(first.value) / 1e18;
+                        log(`💰 Latest: ${amount.toFixed(2)} XTOO from ${first.from.slice(0,6)}...`, 'success');
+                    }
+                    
+                } else {
+                    log(`❌ API Error: ${data.message}`, 'error');
+                    log(`❌ Result: ${JSON.stringify(data.result)}`, 'error');
+                }
+                
+                log('---');
+                log('Raw response:', 'info');
+                log(JSON.stringify(data, null, 2).slice(0, 300) + '...', 'info');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        function openDashboard() {
+            window.open('dashboard_investor_cloud.html', '_blank');
+        }
+    </script>
+</body>
+</html>
