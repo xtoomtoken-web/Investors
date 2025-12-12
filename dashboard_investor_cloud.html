@@ -568,7 +568,7 @@
 
         const BSC_CHAIN_ID = '0x38';
         const BSC_RPC = 'https://bsc-dataseed.binance.org/';
-        const BSCSCAN_API = 'https://api.bscscan.com/api';
+        const BSCSCAN_API = 'https://api.bscscan.com/api'; // API endpoint (V2 compatible with chainid)
         const REAL_API_KEY = 'EQ98GKDYBT5SP4UZJPN8E5UKEDFJPB6RYY';
         const BSCSCAN_API_KEY = '1SBKZNRWAU5MS3Q2VQXFMUZWMGKJRSGF5M'; // API key del usuario
         const COINGECKO_API = 'https://api.coingecko.com/api/v3';
@@ -992,14 +992,17 @@
             
             try {
                 if (isCloudConnected && supabase) {
-                    // 🔒 Set wallet context for RLS
-                    await supabase.rpc('set_config', {
-                        setting: 'app.current_wallet',
-                        value: walletAddress.toLowerCase()
-                    }).catch(() => {
-                        // Fallback: set via SQL if RPC not available
-                        console.log('Setting wallet context for RLS');
-                    });
+                    // 🔒 Set wallet context for RLS (non-blocking)
+                    try {
+                        await supabase.rpc('set_config', {
+                            setting: 'app.current_wallet',
+                            value: walletAddress.toLowerCase()
+                        });
+                        console.log('✅ Wallet context set for RLS');
+                    } catch (rpcError) {
+                        // Non-critical error, continue anyway
+                        console.warn('⚠️ Could not set RLS context (non-critical):', rpcError.message);
+                    }
                     
                     // Save to Supabase with detailed logging
                     const saveData = {
@@ -2313,7 +2316,8 @@
                 
                 // Try BSCScan API for real transaction data
                 try {
-                    const bscScanUrl = `${BSCSCAN_API}?module=account&action=tokentx&contractaddress=0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a&address=${userAddress}&page=1&offset=100&sort=desc&apikey=${BSCSCAN_API_KEY}`;
+                    // BSCScan API V2 format
+                    const bscScanUrl = `${BSCSCAN_API}?chainid=56&module=account&action=tokentx&contractaddress=0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a&address=${userAddress}&page=1&offset=100&sort=desc&apikey=${BSCSCAN_API_KEY}`;
                     
                     console.log('BSCScan API URL:', bscScanUrl);
                     
@@ -2406,26 +2410,23 @@
                 // Si todos los métodos fallan, mostrar mensaje de error
                 historyContent.innerHTML = `
                     <div class="text-center py-8">
-                        <div class="text-6xl mb-4">⚠️</div>
-                        <h3 class="text-xl font-bold text-white mb-2">API Error</h3>
-                        <p class="text-gray-400 mb-4">Unable to fetch transaction data from APIs</p>
-                        <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4 text-left text-sm max-w-md mx-auto">
-                            <p class="text-gray-300 mb-2"><strong>Tried methods:</strong></p>
-                            <p class="text-gray-400">• BSCScan direct API</p>
-                            <p class="text-gray-400">• Generic token API</p>
-                            <p class="text-gray-400">• HTML extraction</p>
-                            <div class="mt-3">
+                        <div class="text-6xl mb-4">🔄</div>
+                        <h3 class="text-xl font-bold text-white mb-2">BSCScan API Migration Required</h3>
+                        <p class="text-gray-400 mb-4">BSCScan has deprecated the V1 API. Transaction history is temporarily unavailable.</p>
+                        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mt-4 text-left text-sm max-w-md mx-auto">
+                            <p class="text-yellow-300 mb-3"><strong>⚠️ API Status:</strong> BSCScan V1 API deprecated</p>
+                            <p class="text-gray-300 mb-2"><strong>View your history:</strong></p>
+                            <div class="mt-3 space-y-2">
                                 <a href="https://bscscan.com/address/${userAddress}#tokentxns" target="_blank" 
-                                   class="text-purple-400 hover:underline text-xs">
-                                    🔗 Check BSCScan directly ↗
+                                   class="block text-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                    🔗 Open in BSCScan ↗
+                                </a>
+                                <a href="https://bscscan.com/token/0x5cFC37a4AE6108E146f2Bbed702c4AcaBB5a149a?a=${userAddress}" target="_blank" 
+                                   class="block text-center bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                    📊 XTOO Token Transfers ↗
                                 </a>
                             </div>
-                            <div class="mt-3">
-                                <button onclick="loadXTOOHistory()" 
-                                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-xs">
-                                    🔄 Retry
-                                </button>
-                            </div>
+                            <p class="text-gray-400 text-xs mt-3">💡 We're working on migrating to BSCScan API V2</p>
                         </div>
                     </div>
                 `;
@@ -2613,7 +2614,8 @@
             const historyContent = document.getElementById('historyContent');
             try {
                 // Method 2: Direct contract query
-                const url2 = `${BSCSCAN_API}?module=account&action=tokentx&contractaddress=${xtooAddress}&address=${userAddress}&startblock=0&endblock=999999999&page=1&offset=10&sort=desc`;
+                // BSCScan API V2 format
+                const url2 = `${BSCSCAN_API}?chainid=56&module=account&action=tokentx&contractaddress=${xtooAddress}&address=${userAddress}&startblock=0&endblock=999999999&page=1&offset=10&sort=desc&apikey=${BSCSCAN_API_KEY}`;
                 
                 console.log('Trying direct contract query:', url2);
                 const data2 = await cachedFetch(url2, {}, 'transaction_history');
