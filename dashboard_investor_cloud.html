@@ -510,6 +510,8 @@
     </div>
 
     <script>
+        console.log('🚀 Dashboard script starting...');
+        
         // ================================
         // SUPABASE CONFIGURATION
         // ================================
@@ -517,16 +519,23 @@
         const SUPABASE_URL = 'https://trwddrhdgdvtejkukgqw.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyd2RkcmhkZ2R2dGVqa3VrZ3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2ODE3ODcsImV4cCI6MjA3NTI1Nzc4N30.B_MS8EG8y42tOERPU-352X_R9RHK2BsmPjS8O8T8QMo';
         
-        let supabase = null;
+        console.log('📝 Supabase config loaded');
+        
+        let supabaseClient = null;
         let isCloudConnected = false;
         
         // Initialize Supabase
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            isCloudConnected = true;
-            console.log('✅ Supabase connected');
+            if (typeof window.supabase !== 'undefined') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                isCloudConnected = true;
+                console.log('✅ Supabase connected');
+            } else {
+                console.warn('⚠️ Supabase library not loaded, using localStorage fallback');
+                isCloudConnected = false;
+            }
         } catch (error) {
-            console.warn('⚠️ Supabase not configured, using localStorage fallback');
+            console.warn('⚠️ Supabase initialization error, using localStorage fallback:', error);
             isCloudConnected = false;
         }
 
@@ -995,10 +1004,10 @@
             });
             
             try {
-                if (isCloudConnected && supabase) {
+                if (isCloudConnected && supabaseClient) {
                     // 🔒 Set wallet context for RLS (non-blocking)
                     try {
-                        await supabase.rpc('set_config', {
+                        await supabaseClient.rpc('set_config', {
                             setting: 'app.current_wallet',
                             value: walletAddress.toLowerCase()
                         });
@@ -1019,7 +1028,7 @@
                     
                     console.log('🔄 Sending to Supabase:', saveData);
                     
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('investors')
                         .upsert(saveData, {
                             onConflict: 'wallet_address',
@@ -1035,7 +1044,7 @@
                     updateCloudStatus('✅ Synced');
                     
                     // Verify save by immediately reading back
-                    const verification = await supabase
+                    const verification = await supabaseClient
                         .from('investors')
                         .select('*')
                         .eq('wallet_address', walletAddress.toLowerCase())
@@ -1066,11 +1075,11 @@
             console.log('📖 Loading investor data for:', walletAddress);
             
             try {
-                if (isCloudConnected && supabase) {
+                if (isCloudConnected && supabaseClient) {
                     // Get from Supabase
                     console.log('🔍 Querying Supabase for wallet:', walletAddress.toLowerCase());
                     
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('investors')
                         .select('*')
                         .eq('wallet_address', walletAddress.toLowerCase())
@@ -2866,12 +2875,27 @@
         // ================================
         // EVENT LISTENERS
         // ================================
+        console.log('📋 Registering DOMContentLoaded listener...');
+        
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ DOMContentLoaded fired!');
+            console.log('🔍 Checking for connectButton element...');
+            
+            const connectBtn = document.getElementById('connectButton');
+            console.log('connectButton element:', connectBtn);
+            
+            if (!connectBtn) {
+                console.error('❌ CRITICAL: connectButton element not found!');
+                return;
+            }
+            
             // Update cloud status on page load
             updateCloudStatus(isCloudConnected ? '☁️ Cloud DB' : '💾 Local');
 
             // Connect wallet button
-            document.getElementById('connectButton').addEventListener('click', async function() {
+            console.log('🎯 Adding click listener to connectButton...');
+            connectBtn.addEventListener('click', async function() {
+                console.log('🖱️ Connect button CLICKED!');
                 if (typeof window.ethereum !== 'undefined') {
                     try {
                         showLoading('Connecting wallet...');
