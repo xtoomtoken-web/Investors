@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Investor Tracking</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Supabase - Fixed version to avoid conflicts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
     <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
@@ -526,12 +526,16 @@
         
         // Initialize Supabase
         try {
-            if (typeof window.supabase !== 'undefined') {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // Check for Supabase in different possible locations
+            const SupabaseLib = window.supabase || window.Supabase;
+            
+            if (SupabaseLib && SupabaseLib.createClient) {
+                supabaseClient = SupabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 isCloudConnected = true;
                 console.log('✅ Supabase connected');
             } else {
                 console.warn('⚠️ Supabase library not loaded, using localStorage fallback');
+                console.log('Available window properties:', Object.keys(window).filter(k => k.toLowerCase().includes('supabase')));
                 isCloudConnected = false;
             }
         } catch (error) {
